@@ -23,7 +23,7 @@ torch.use_deterministic_algorithms(True)
 
 os.makedirs('./output/', exist_ok=True)
 
-n_trajectories = 1000
+n_trajectories = 60
 n_samples_per_traj = 500
 n_transient = 5000
 h = 0.01
@@ -56,14 +56,14 @@ test_set = traj_Dataset(n_trajectories=int(n_trajectories/8),
 
 BATCH_SIZE = 32
 lr = 0.001
-NUM_EPOCHS = 50
+NUM_EPOCHS = 200
 
 
 train_loader = torch.utils.data.DataLoader(train_set, batch_size = 32, shuffle=True)
 val_loader = torch.utils.data.DataLoader(val_set, batch_size = 32, shuffle=False)
 test_loader = torch.utils.data.DataLoader(test_set, batch_size = 32, shuffle=False)
 
-model = tanh_model(8).to(device)
+model = tanh_model(4).to(device)
 
 loss_fn = torch.nn.MSELoss()
 optimiser = torch.optim.AdamW(model.parameters(), lr=lr)
@@ -100,7 +100,7 @@ print('\n\n')
 print('-----RESULTS-----')
 print(f'| Train Loss : {trn_loss:.6f} | Train Average Euclidean Distance: {trn_acc} |\n')
 print(f'| Val Loss : {val_loss:.6f} | Val Average Euclidean Distance: {val_acc} |\n')
-print(f'| Test Loss : {val_loss:.6f} | Test Average Euclidean Distance: {val_acc} |\n')
+print(f'| Test Loss : {test_loss:.6f} | Test Average Euclidean Distance: {test_acc} |\n')
 
 torch.save(model.state_dict(), './output/model.pth')
 

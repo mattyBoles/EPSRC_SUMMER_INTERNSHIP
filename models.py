@@ -27,7 +27,7 @@ class avg_euclidean_error(torch.nn.Module):
         self.mean = mean
         self.std = std
     def forward(self, pred, target):
-        pred = (pred * self.std) + self.mean
-        target = (target * self.std) + self.mean
-        error = torch.linalg.norm(pred - target, axis = 1)
-        return torch.mean(error)
+      pred = (pred * self.std.to(pred.device)) + self.mean.to(pred.device)
+      target = (target * self.std.to(pred.device)) + self.mean.to(pred.device)
+      error = torch.linalg.norm(pred - target, axis = 1)
+      return torch.mean(error)

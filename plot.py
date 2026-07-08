@@ -28,7 +28,6 @@ def plot_model(model,
                                            n_steps = n_steps,
                                            h = 0.01)
     
-    print(np.hstack([np.array(x_model)[:100,:], x_true[:100,:]]))
     generator.plot(two_traj=False, traj1=x_true, traj2 = None, png_name = './output/REAL_LORENZ.png')
     generator.plot(two_traj=False, traj1=np.array(x_model), traj2 = None, png_name = './output/MODEL_TRAJ.png')
 

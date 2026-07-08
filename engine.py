@@ -19,21 +19,21 @@ def train_epoch(model,
 
     for idx, (inputs, targets) in enumerate(dataloader):
         
-       targets = targets.float().to(device)
-       inputs = inputs.float().to(device)
+      targets = targets.float().to(device)
+      inputs = inputs.float().to(device)
 
-       optimiser.zero_grad()
+      optimiser.zero_grad()
 
-       preds = model(targets)
+      preds = model(inputs)
         
-       loss = loss_fn(preds, targets)
-       epoch_loss += loss.item() 
+      loss = loss_fn(preds, targets)
+      epoch_loss += loss.item() 
+      
+      acc = acc_fn(preds, targets)
+      epoch_acc += acc.item()
 
-       acc = acc_fn(preds.to('cpu'), targets.to('cpu'))
-       epoch_acc += acc.item()
-
-       loss.backward()
-       optimiser.step()
+      loss.backward()
+      optimiser.step()
 
     epoch_loss /= n_batches
     epoch_acc /= n_batches
@@ -60,9 +60,9 @@ def val_epoch(model,
             targets = targets.float().to(device)
             inputs = inputs.float().to(device)
 
-            preds = model(targets)
+            preds = model(inputs)
                 
-            loss = loss_fn(preds.to('cpu'), targets.to('cpu'))
+            loss = loss_fn(preds, targets)
             epoch_loss += loss.item() 
 
             acc = acc_fn(preds, targets)
@@ -138,12 +138,12 @@ def test(model,
             targets = targets.float().to(device)
             inputs = inputs.float().to(device)
 
-            preds = model(targets)
+            preds = model(inputs)
                 
             loss = loss_fn(preds, targets)
             total_loss += loss.item() 
 
-            acc = acc_fn(preds.to('cpu'), targets.to('cpu'))
+            acc = acc_fn(preds, targets)
             total_acc += acc.item()
 
             all_targets.append(targets)

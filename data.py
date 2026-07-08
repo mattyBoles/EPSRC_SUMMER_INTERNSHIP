@@ -37,6 +37,9 @@ class traj_Dataset(torch.utils.data.Dataset):
         else:
             self.mean = mean
             self.std = std
+        
+        self.samples = (self.samples - self.mean) / self.std
+        self.targets = (self.targets - self.mean) / self.std
 
         print(f"Initialised Dataset:\n{self.n_trajectories} Trajectories \n{self.n_samples_per_traj} Samples per Trajectory\n{self.n_transient} Transient steps\nh = {self.h}")
 
@@ -60,7 +63,7 @@ class traj_Dataset(torch.utils.data.Dataset):
         
         samples = torch.tensor(samples)
         targets = torch.tensor(targets)
-    
+
         return samples, targets 
         
 
@@ -70,9 +73,7 @@ class traj_Dataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
 
-        sample = (self.samples[idx] - self.mean) / self.std
-        target = (self.targets[idx] - self.mean) / self.std
-        return sample, target
+        return self.samples[idx], self.targets[idx]
     
 if __name__ == '__main__':
     dataset = traj_Dataset(n_trajectories=100, n_samples_per_traj=100, n_transient = 50)
