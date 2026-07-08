@@ -20,9 +20,14 @@ class tanh_model(torch.nn.Module):
 
 
 class avg_euclidean_error(torch.nn.Module):
-    def __init__(self):
+    def __init__(self,
+                 mean,
+                 std):
         super().__init__()
-    
+        self.mean = mean
+        self.std = std
     def forward(self, pred, target):
+        pred = (pred * self.std) + self.mean
+        target = (target * self.std) + self.mean
         error = torch.linalg.norm(pred - target, axis = 1)
         return torch.mean(error)

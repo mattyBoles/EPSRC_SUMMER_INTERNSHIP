@@ -22,7 +22,7 @@ torch.use_deterministic_algorithms(True)
 
 os.makedirs('./output/', exist_ok=True)
 
-n_trajectories = 100
+n_trajectories = 1000
 n_samples_per_traj = 500
 n_transient = 5000
 h = 0.01
@@ -31,34 +31,44 @@ h = 0.01
 train_set = traj_Dataset(n_trajectories=n_trajectories,
                          n_samples_per_traj=n_samples_per_traj,
                          n_transient=n_transient,
-                         h=h)
+                         h=h,
+                         mean = None,
+                         std = None)
+
+mean = train_set.mean
+std = train_set.std
 
 val_set = traj_Dataset(n_trajectories=int(n_trajectories/8),
                          n_samples_per_traj=n_samples_per_traj,
                          n_transient=n_transient,
-                         h=h)
+                         h=h,
+                         mean = mean,
+                         std = std)
 
 test_set = traj_Dataset(n_trajectories=int(n_trajectories/8),
                          n_samples_per_traj=n_samples_per_traj,
                          n_transient=n_transient,
-                         h=h)
+                         h=h,
+                         mean = mean,
+                         std = std)
 
 
 BATCH_SIZE = 32
 lr = 0.001
-NUM_EPOCHS = 100
+NUM_EPOCHS = 50
 
 
 train_loader = torch.utils.data.DataLoader(train_set, batch_size = 32, shuffle=True)
 val_loader = torch.utils.data.DataLoader(val_set, batch_size = 32, shuffle=False)
 test_loader = torch.utils.data.DataLoader(test_set, batch_size = 32, shuffle=False)
 
-model = tanh_model(4).to(device)
+model = tanh_model(8).to(device)
 
 loss_fn = torch.nn.MSELoss()
 optimiser = torch.optim.AdamW(model.parameters(), lr=lr)
 
-acc_fn = avg_euclidean_error()
+acc_fn = avg_euclidean_error(mean = mean,
+                             std = std)
 
 train_results = train(model = model,
                       train_loader = train_loader,
@@ -94,6 +104,8 @@ print(f'| Test Loss : {val_loss:.6f} | Test Average Euclidean Distance: {val_acc
 torch.save(model.state_dict(), './output/model.pth')
 
 plot_model(model = model,
-           x0 = np.array([1,1,0]),
-           n_steps = 10000)
+           x0 = np.array([1,1,25]),
+           n_steps = 10000,
+           mean = mean,
+           std = std)
 

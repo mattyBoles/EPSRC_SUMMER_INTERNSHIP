@@ -3,7 +3,7 @@ import torch
 import numpy as np
 from lorenz import LorenzGenerator
 import random
-
+from typing import Optional
 
 RANDOM_SEED = 0
 
@@ -18,7 +18,9 @@ class traj_Dataset(torch.utils.data.Dataset):
                  n_trajectories: int,
                  n_samples_per_traj: int,
                  n_transient: int,
-                 h: int = 0.01):
+                 h: int = 0.01, 
+                 mean: Optional[torch.Tensor] = None,
+                 std: Optional[torch.Tensor] = None,):
         
         self.traj_generator = LorenzGenerator()
 
@@ -29,11 +31,18 @@ class traj_Dataset(torch.utils.data.Dataset):
 
         self.samples, self.targets = self.generate_samples()
 
+        if mean == None:
+            self.mean =torch.mean(self.samples, axis=0)
+            self.std =torch.std(self.samples, axis=0)
+        else:
+            self.mean = mean
+            self.std = std
+
         print(f"Initialised Dataset:\n{self.n_trajectories} Trajectories \n{self.n_samples_per_traj} Samples per Trajectory\n{self.n_transient} Transient steps\nh = {self.h}")
 
     def generate_samples(self):
-        samples = []
-        targets = []
+        samples = np.empty((0,3))
+        targets = np.empty((0,3))
 
         for i in range(self.n_trajectories):
 
@@ -43,14 +52,14 @@ class traj_Dataset(torch.utils.data.Dataset):
                                                     h = self.h)
             traj = traj[self.n_transient+1:]
 
-            samples.append(traj)
+            samples = np.vstack([samples, traj])
 
             last_target = self.traj_generator.rk4(self.traj_generator.calc_derivatives, x_ = traj[-1], h = self.h)
 
-            targets.append(np.vstack([traj[1:], last_target]))
+            targets = np.vstack([targets,np.vstack([traj[1:], last_target])])
         
-        samples = torch.flatten(torch.tensor(samples), start_dim=0, end_dim=1)
-        targets = torch.flatten(torch.tensor(targets), start_dim=0, end_dim=1)
+        samples = torch.tensor(samples)
+        targets = torch.tensor(targets)
     
         return samples, targets 
         
@@ -60,7 +69,10 @@ class traj_Dataset(torch.utils.data.Dataset):
         return (self.n_samples_per_traj * self.n_trajectories)
 
     def __getitem__(self, idx):
-        return self.samples[idx], self.targets[idx]
+
+        sample = (self.samples[idx] - self.mean) / self.std
+        target = (self.targets[idx] - self.mean) / self.std
+        return sample, target
     
 if __name__ == '__main__':
     dataset = traj_Dataset(n_trajectories=100, n_samples_per_traj=100, n_transient = 50)
