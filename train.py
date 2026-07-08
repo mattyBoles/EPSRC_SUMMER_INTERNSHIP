@@ -11,6 +11,7 @@ from plot import plot_model
 
 
 device = 'cuda:0' if torch.cuda.is_available() == True else 'cpu'
+print(device)
 
 RANDOM_SEED = 0
 
