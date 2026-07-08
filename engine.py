@@ -29,7 +29,7 @@ def train_epoch(model,
        loss = loss_fn(preds, targets)
        epoch_loss += loss.item() 
 
-       acc = acc_fn(preds, targets)
+       acc = acc_fn(preds.to('cpu'), targets.to('cpu'))
        epoch_acc += acc.item()
 
        loss.backward()
@@ -62,7 +62,7 @@ def val_epoch(model,
 
             preds = model(targets)
                 
-            loss = loss_fn(preds, targets)
+            loss = loss_fn(preds.to('cpu'), targets.to('cpu'))
             epoch_loss += loss.item() 
 
             acc = acc_fn(preds, targets)
@@ -143,7 +143,7 @@ def test(model,
             loss = loss_fn(preds, targets)
             total_loss += loss.item() 
 
-            acc = acc_fn(preds, targets)
+            acc = acc_fn(preds.to('cpu'), targets.to('cpu'))
             total_acc += acc.item()
 
             all_targets.append(targets)
