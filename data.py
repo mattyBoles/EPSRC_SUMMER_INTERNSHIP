@@ -88,7 +88,7 @@ def find_points_near_fixed_points(x0,
     fixed_points = [np.array([ 8.485,  8.485, 27   ]), np.array([ -8.485,  -8.485, 27   ])]
 
     for i in range(5000):
-        x = g.generate_trajectory(x0, n_steps=5000, h=0.01)
+        x = g.generate_trajectory(x0, n_steps=5000, h=0.01)[-1]
 
         sampled_targets = []
         sampled_points = []
