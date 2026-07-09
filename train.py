@@ -23,8 +23,8 @@ torch.use_deterministic_algorithms(True)
 
 os.makedirs('./output/', exist_ok=True)
 
-n_trajectories = 500
-n_samples_per_traj = 500
+n_trajectories = 100
+n_samples_per_traj = 800
 n_transient = 5000
 h = 0.01
 

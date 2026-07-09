@@ -151,8 +151,8 @@ class LorenzGenerator():
         if two_traj:
             x, y, z = traj2[:,0], traj2[:,1], traj2[:,2]
             ax.plot(x, y, z, lw=1, c='r', alpha=0.5)          # line plot of the path
-        plt.savefig(png_name)
-        #plt.show()
+        #plt.savefig(png_name)
+        plt.show()
         
 
 
@@ -264,34 +264,63 @@ if __name__ == '__main__':
     #Lyapunov Spectrum
 
 
-    zdot, singular_values, l_vectors, r_vectors, xout = generator.find_lyapunov_spectrum(x=np.array([1,1,0]), transient_steps=5000, trajectory_steps=10000, QR_steps=10, h=0.01)
+    # zdot, singular_values, l_vectors, r_vectors, xout = generator.find_lyapunov_spectrum(x=np.array([1,1,0]), transient_steps=5000, trajectory_steps=10000, QR_steps=10, h=0.01)
     
 
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
 
-    # Create line segments
-    points = xout.reshape(-1, 1, 3)
-    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+    # # Create line segments
+    # points = xout.reshape(-1, 1, 3)
+    # segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-    # Colour by sv_2
-    #sv2 = np.array([s[1] for s in singular_values])
-    zdot = np.array(np.abs(zdot))
+    # # Colour by sv_2
+    # #sv2 = np.array([s[1] for s in singular_values])
+    # zdot = np.array(np.abs(zdot))
 
-    norm = plt.Normalize(zdot.min(), zdot.max())
+    # norm = plt.Normalize(zdot.min(), zdot.max())
 
-    lc = Line3DCollection(segments, cmap='inferno', norm=norm)
-    lc.set_array(zdot)
-    ax.add_collection3d(lc)
+    # lc = Line3DCollection(segments, cmap='inferno', norm=norm)
+    # lc.set_array(zdot)
+    # ax.add_collection3d(lc)
 
-    ax.set_xlim(xout[:,0].min(), xout[:,0].max())
-    ax.set_ylim(xout[:,1].min(), xout[:,1].max())
-    ax.set_zlim(xout[:,2].min(), xout[:,2].max())
+    # ax.set_xlim(xout[:,0].min(), xout[:,0].max())
+    # ax.set_ylim(xout[:,1].min(), xout[:,1].max())
+    # ax.set_zlim(xout[:,2].min(), xout[:,2].max())
 
-    plt.colorbar(lc, ax=ax, label='sv_2')
-    plt.title('Lorenz attractor coloured by sv_2')
-    plt.show()
+    # plt.colorbar(lc, ax=ax, label='sv_2')
+    # plt.title('Lorenz attractor coloured by sv_2')
+    # plt.show()
+
+    W1 = np.array([[0.0091, 0.0008, -0.0004],
+                   [0.014, 0.0063, -0.0016],
+                   [0.0061, 0.0023, -0.0049],
+                   [0.0085, 0.0036, 0.0041]])
+    
+    b1 = np.array([0.1697, -0.6054, -0.0449, 0.1773]).T
+
+    W2 = np.array([[94.6004, 8.7248, -0.80364, 3.0535],
+                   [-349.8684, 11.3885, 207.0634, 227.4161],
+                   [32.1244, 93.9784, -214.6608, 11.9787]])
+    
+    b2 = np.array([-12.1241, 34.2950, 33.6097]).T
+
+    x = np.array([1,1,25]).T
+    xout = []
+    for i in range(10000):
+
+        x = (W1 @ x) + b1
+
+        x = np.tanh(x)
+
+        x = (W2 @ x) + b2
+
+        xout.append(x.T)
+
+    c = LorenzGenerator()
+
+    c.plot(two_traj=False, traj1=np.array(xout), traj2 = None, png_name='out.png')
 
 
 
