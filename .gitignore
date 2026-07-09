@@ -1,2 +1,4 @@
 __pycache__/
 output/
+lorenz_ani.py
+*.png

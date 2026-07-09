@@ -46,21 +46,41 @@ class traj_Dataset(torch.utils.data.Dataset):
     def generate_samples(self):
         samples = np.empty((0,3))
         targets = np.empty((0,3))
-        for i in range(self.n_trajectories):
+
+        for i in range(int(self.n_trajectories*0.75)):
 
             x0 = np.array([np.random.uniform(-20, 20), np.random.uniform(-20, 20), np.random.uniform(0,50)])
-            inner_samples, inner_targets = find_points_near_fixed_points(x0, n_samples=(self.n_samples_per_traj / 4))
             traj = self.traj_generator.generate_trajectory(x0 = x0,
                                                     n_steps = (self.n_samples_per_traj + self.n_transient),
                                                     h = self.h)
             traj = traj[self.n_transient+1:]
 
-            samples = np.vstack([samples, traj, inner_samples])
+            samples = np.vstack([samples, traj])
 
             last_target = self.traj_generator.rk4(self.traj_generator.calc_derivatives, x_ = traj[-1], h = self.h)
 
-            targets = np.vstack([targets,np.vstack([traj[1:], last_target]), inner_targets])
+            targets = np.vstack([targets,np.vstack([traj[1:], last_target])])
+
         
+        for i in range(int(self.n_trajectories*0.25)):
+            
+            point = np.array([8.485, 8.485, 27]) if i % 2 == 0 else np.array([-8.485, -8.485, 27])            
+            directions = np.random.normal(size=3)
+            directions /= np.linalg.norm(directions)
+
+            # random radius with correct volume distribution
+            r = 5 * np.random.rand()**(1/3)
+
+            point = point + r * directions
+            traj = self.traj_generator.generate_trajectory(x0 = point,
+                                                    n_steps = (self.n_samples_per_traj),
+                                                    h = self.h)
+
+            samples = np.vstack([samples, traj])
+
+            last_target = self.traj_generator.rk4(self.traj_generator.calc_derivatives, x_ = traj[-1], h = self.h)
+
+            targets = np.vstack([targets,np.vstack([traj[1:], last_target])])
         samples = torch.tensor(samples)
         targets = torch.tensor(targets)
 
@@ -81,27 +101,6 @@ if __name__ == '__main__':
 
 
 
-def find_points_near_fixed_points(x0,
-                                  n_samples = 100):
-    g = LorenzGenerator()
 
-    fixed_points = [np.array([ 8.485,  8.485, 27   ]), np.array([ -8.485,  -8.485, 27   ])]
-
-    for i in range(5000):
-        x = g.generate_trajectory(x0, n_steps=5000, h=0.01)[-1]
-
-        sampled_targets = []
-        sampled_points = []
-
-        while len(sampled_points) < n_samples:
-            xout = g.rk4(g.calc_derivatives, x, 0.01)
-            for fixed_point in fixed_points:
-                dist = np.linalg.norm((xout - fixed_point))
-                if dist < 6:
-                    sampled_points.append(x)
-                    sampled_targets.append(xout)
-            x = xout
-
-    return np.array(sampled_points), np.array(sampled_targets)
 
 
