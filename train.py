@@ -23,7 +23,7 @@ torch.use_deterministic_algorithms(True)
 
 os.makedirs('./output/', exist_ok=True)
 
-n_trajectories = 60
+n_trajectories = 500
 n_samples_per_traj = 500
 n_transient = 5000
 h = 0.01
@@ -63,7 +63,7 @@ train_loader = torch.utils.data.DataLoader(train_set, batch_size = 32, shuffle=T
 val_loader = torch.utils.data.DataLoader(val_set, batch_size = 32, shuffle=False)
 test_loader = torch.utils.data.DataLoader(test_set, batch_size = 32, shuffle=False)
 
-model = tanh_model(4).to(device)
+model = tanh_model(8).to(device)
 
 loss_fn = torch.nn.MSELoss()
 optimiser = torch.optim.AdamW(model.parameters(), lr=lr)

@@ -108,7 +108,7 @@ def train(model,
         results['train_loss'].append(train_loss)
         results['train_acc'].append(train_acc)
         results['val_loss'].append(val_loss)
-        results['val_loss'].append(val_acc)
+        results['val_acc'].append(val_acc)
 
         if epoch % 10 == 0:
             print(f'| Epoch {epoch} |\n| Train Loss : {train_loss:.6f} | Train Average Euclidean Distance: {train_acc} |\n| Val Loss : {val_loss:.6f} | Val Average Euclidean Distance: {val_acc} |')
