@@ -1,4 +1,12 @@
 __pycache__/
 output/
+output_1/
 lorenz_ani.py
 *.png
+*.csv
+*.log
+best/
+tanh_32/
+newest/
+weekend.py
+read_json.py

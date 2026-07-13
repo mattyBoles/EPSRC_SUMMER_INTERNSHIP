@@ -47,7 +47,7 @@ class traj_Dataset(torch.utils.data.Dataset):
         samples = np.empty((0,3))
         targets = np.empty((0,3))
 
-        for i in range(int(self.n_trajectories*0.75)):
+        for i in range(int(self.n_trajectories*0.7)):
 
             x0 = np.array([np.random.uniform(-20, 20), np.random.uniform(-20, 20), np.random.uniform(0,50)])
             traj = self.traj_generator.generate_trajectory(x0 = x0,
@@ -57,12 +57,12 @@ class traj_Dataset(torch.utils.data.Dataset):
 
             samples = np.vstack([samples, traj])
 
-            last_target = self.traj_generator.rk4(self.traj_generator.calc_derivatives, x_ = traj[-1], h = self.h)
+            last_target = self.traj_generator.rk4(self.traj_generator.calc_derivatives, x = traj[-1], h = self.h)
 
             targets = np.vstack([targets,np.vstack([traj[1:], last_target])])
 
         
-        for i in range(int(self.n_trajectories*0.25)):
+        for i in range(int(self.n_trajectories*0.3)):
             
             point = np.array([8.485, 8.485, 27]) if i % 2 == 0 else np.array([-8.485, -8.485, 27])            
             directions = np.random.normal(size=3)
@@ -78,7 +78,7 @@ class traj_Dataset(torch.utils.data.Dataset):
 
             samples = np.vstack([samples, traj])
 
-            last_target = self.traj_generator.rk4(self.traj_generator.calc_derivatives, x_ = traj[-1], h = self.h)
+            last_target = self.traj_generator.rk4(self.traj_generator.calc_derivatives, x = traj[-1], h = self.h)
 
             targets = np.vstack([targets,np.vstack([traj[1:], last_target])])
         samples = torch.tensor(samples)
@@ -89,7 +89,7 @@ class traj_Dataset(torch.utils.data.Dataset):
 
 
     def __len__(self):
-        return (self.n_samples_per_traj * self.n_trajectories)
+        return (len(self.samples))
 
     def __getitem__(self, idx):
 

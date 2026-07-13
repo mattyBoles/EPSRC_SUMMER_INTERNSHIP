@@ -7,7 +7,9 @@ def plot_model(model,
                x0,
                n_steps,
                mean,
-               std):
+               std,
+               output_dir,
+               MODEL_NAME):
     
     model = model.to('cpu')
 
@@ -28,8 +30,8 @@ def plot_model(model,
                                            n_steps = n_steps,
                                            h = 0.01)
     
-    generator.plot(two_traj=False, traj1=x_true, traj2 = None, png_name = './output/REAL_LORENZ.png')
-    generator.plot(two_traj=False, traj1=np.array(x_model), traj2 = None, png_name = './output/MODEL_TRAJ.png')
+    generator.plot(png_name = f'{output_dir}/{MODEL_NAME}_REAL_LORENZ.png', traj1=x_true, traj2 = None, )
+    generator.plot(png_name = f'{output_dir}/{MODEL_NAME}_MODEL_TRAJ.png', traj1=np.array(x_model), traj2 = None)
 
 
 

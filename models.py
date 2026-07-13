@@ -2,17 +2,21 @@ import torch
 
 
 class tanh_model(torch.nn.Module):
-    def __init__(self, hidden_units):
+    def __init__(self, hidden_units, activation):
         super().__init__()
 
-        self.tanh = torch.tanh
+        if activation == 'tanh':
+            self.activation = torch.tanh
+        else:
+            self.activation = torch.relu
+            
         self.linear1 = torch.nn.Linear(in_features=3, out_features=hidden_units)
         self.linear2 = torch.nn.Linear(in_features=hidden_units, out_features=3)
 
     def forward(self, x):
 
         x = self.linear1(x)
-        x = self.tanh(x)
+        x = self.activation(x)
         x = self.linear2(x)
 
         return x
