@@ -49,7 +49,7 @@ def analysis(root_folder, MODEL_NAME, hidden_size, activation):
     singular_values, l_vectors, r_vectors, zdot = [], [], [], []
 
 
-    #sigma = std.numpy()
+    sigma = std.numpy()
 
     # lambda1_list, lambda2_list, lambda3_list = [],[],[]
     # for i in range(20):
