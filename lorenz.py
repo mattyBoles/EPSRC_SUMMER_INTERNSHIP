@@ -278,6 +278,7 @@ class LorenzGenerator():
         lambda_ = np.empty((3, n_qr_samples))
         singular_values, l_vectors, r_vectors, zdot = [], [], [], []
         count = 0
+        x_ = []
 
         for i in range(transient_steps):
             x, Q = self.rk4_matrix_and_x(f = self.calc_derivatives, J = self.J, x = x, U = Q,  h=h)
@@ -288,6 +289,7 @@ class LorenzGenerator():
 
         for i in range(trajectory_steps):
             x, Q = self.rk4_matrix_and_x(f = self.calc_derivatives, J = self.J, x = x, U = Q,  h=h)
+            x_.append(x)
             
             J = self.J(x)
             J = np.eye(3) + h*J
@@ -315,6 +317,7 @@ class LorenzGenerator():
             'singular_values':singular_values,
             'l_vectors':l_vectors,
             'r_vectors':r_vectors,
+            'x_': x_
         }
     
 
@@ -328,8 +331,35 @@ if __name__ == '__main__':
     print(f'Dominant Lyapunov Exponent: {d_lyapunov_exp}')
 
     #Lyapunov Spectrum
-    lyapunov_spectrum = generator.find_lyapunov_spectrum(x=np.array([1,1,0]))['lyapunov_spectrum']
-    print(f"Lambda1: {lyapunov_spectrum[0]}\nLambda2: {lyapunov_spectrum[1]}\nLambda3: {lyapunov_spectrum[2]}\n")
+    results = generator.find_lyapunov_spectrum(x=np.array([1,1,0]))
+    zdot = results['zdot']
+    singular_values = results['singular_values']
+    singular_values = np.array(singular_values)
+    fig, axes = plt.subplots(2,1)
+
+    x = np.array(results['x_'])
+    mask = x[:,0] > 0
+
+
+    axes[0].plot(singular_values[3500:4500,0], label = 'sigma_1')
+    axes[0].plot(singular_values[3500:4500,1], label = 'sigma_2')
+    axes[0].plot(singular_values[3500:4500,2], label = 'sigma_3')
+    axes[0].legend()
+    axes[0].set_title('Lorenz - Discretized Propogator Singular Values')
+    axes[0].set_xlabel('timestep, h = 0.01')
+    axes[0].set_ylabel('SV')
+    axes[1].scatter(range(1000), zdot[3500:4500], c=mask[3500:4500], cmap='coolwarm', s=2)
+    axes[1].set_title('Lorenz - Zdot')
+    axes[1].set_xlabel('timestep, h = 0.01')
+    axes[1].set_ylabel('zdot')
+    plt.savefig('zdot_sv.png')
+    plt.show()
+    
+
+    plt.close('all')
+
+
+    #print(f"Lambda1: {lyapunov_spectrum[0]}\nLambda2: {lyapunov_spectrum[1]}\nLambda3: {lyapunov_spectrum[2]}\n")
 
 
     

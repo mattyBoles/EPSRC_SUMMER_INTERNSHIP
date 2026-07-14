@@ -5,6 +5,7 @@ import random
 import os
 import json
 from datetime import datetime, timezone
+from torch.optim.lr_scheduler import LinearLR,MultiStepLR
 
 from data import traj_Dataset
 from models import tanh_model, avg_euclidean_error
@@ -12,11 +13,18 @@ from engine import train, test
 from plot import plot_model
 
 
+config = {
+    'NUM_EPOCHS': 2000,
+    'hidden_size': 4,
+    'n_traj': 80,
+    'traj_length': 100,
+    'activation': 'tanh'
+}
 def train_over_weekend(config):
     device = 'cuda:0' if torch.cuda.is_available() == True else 'cpu'
     print(device)
 
-    RANDOM_SEED = 5
+    RANDOM_SEED = 42
 
     #REPRODUCABILITY
     torch.manual_seed(RANDOM_SEED)
@@ -141,6 +149,7 @@ def train_over_weekend(config):
     with open(output_dir + f"{MODEL_NAME}_train.json", "w") as f:
             json.dump(json_output, f, indent=2, default=str)
 
+
     plot_model(model = model,
             x0 = np.array([1,1,25]),
             n_steps = 10000,
@@ -149,3 +158,8 @@ def train_over_weekend(config):
             output_dir=output_dir,
             MODEL_NAME=MODEL_NAME)
 
+
+
+
+if __name__ == '__main__':
+     train_over_weekend(config = config)

@@ -82,7 +82,8 @@ def train(model,
           optimiser,
           acc_fn,
           NUM_EPOCHS,
-          device):
+          device,
+          scheduler):
     
     results = {
         'train_loss': [],
@@ -97,7 +98,7 @@ def train(model,
                                             loss_fn = loss_fn,
                                             optimiser = optimiser,
                                             acc_fn = acc_fn,
-                                            device = device)
+                                            device = device, scheduler=scheduler)
         
         val_loss, val_acc = val_epoch(model = model,
                                       dataloader = val_loader,
@@ -112,6 +113,7 @@ def train(model,
 
         if epoch % 10 == 0:
             print(f'| Epoch {epoch} |\n| Train Loss : {train_loss:.6f} | Train Average Euclidean Distance: {train_acc} |\n| Val Loss : {val_loss:.6f} | Val Average Euclidean Distance: {val_acc} |')
+            print(model.linear2.weight)
 
     return results    
     
