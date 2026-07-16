@@ -47,7 +47,7 @@ class traj_Dataset(torch.utils.data.Dataset):
         samples = np.empty((0,3))
         targets = np.empty((0,3))
 
-        for i in range(int(self.n_trajectories*0.7)):
+        for i in range(int(self.n_trajectories*0.5)):
 
             x0 = np.array([np.random.uniform(-20, 20), np.random.uniform(-20, 20), np.random.uniform(0,50)])
             traj = self.traj_generator.generate_trajectory(x0 = x0,
@@ -62,7 +62,7 @@ class traj_Dataset(torch.utils.data.Dataset):
             targets = np.vstack([targets,np.vstack([traj[1:], last_target])])
 
         
-        for i in range(int(self.n_trajectories*0.3)):
+        for i in range(int(self.n_trajectories*0.5)):
             
             point = np.array([8.485, 8.485, 27]) if i % 2 == 0 else np.array([-8.485, -8.485, 27])            
             directions = np.random.normal(size=3)
@@ -75,6 +75,8 @@ class traj_Dataset(torch.utils.data.Dataset):
             traj = self.traj_generator.generate_trajectory(x0 = point,
                                                     n_steps = (self.n_samples_per_traj),
                                                     h = self.h)
+            traj = traj[self.n_transient+1:]
+
 
             samples = np.vstack([samples, traj])
 

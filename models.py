@@ -1,4 +1,5 @@
 import torch
+from torch import nn
 
 
 class tanh_model(torch.nn.Module):
@@ -12,6 +13,7 @@ class tanh_model(torch.nn.Module):
             
         self.linear1 = torch.nn.Linear(in_features=3, out_features=hidden_units)
         self.linear2 = torch.nn.Linear(in_features=hidden_units, out_features=3)
+
 
     def forward(self, x):
 

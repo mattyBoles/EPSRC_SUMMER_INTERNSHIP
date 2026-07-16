@@ -13,7 +13,7 @@ def analysis(root_folder, MODEL_NAME, hidden_size, activation):
     mean, std = torch.load(Path(root_folder,MODEL_NAME+"_stats.pt"))['mean'].to(device), torch.load(Path(root_folder,MODEL_NAME+"_stats.pt"))['std'].to(device)
 
     model = tanh_model(hidden_size, activation=activation)
-    model.load_state_dict(torch.load(Path(root_folder,MODEL_NAME+"_model.pth")))
+    model.load_state_dict(torch.load(Path(root_folder,MODEL_NAME+"_best_epoch.pth")))
     model = model.to(device)
 
     '''
@@ -115,8 +115,13 @@ def analysis(root_folder, MODEL_NAME, hidden_size, activation):
     axes[1].set_xlabel('timestep, h = 0.01')
     axes[1].set_ylabel('SV')
     plt.show()
+    plt.close('all')
+    # plt.savefig(MODEL_NAME)
     return Lyapunov_spectrum[0], Lyapunov_spectrum[1],Lyapunov_spectrum[2]
     # # lambda1_list.append(Lyapunov_spectrum[0])
 
 # lyapunov_1, lyapunov_2, lyapunov_3 = analysis(root_folder=r'./output/2026-07-11T14-18-39_tanh_32', MODEL_NAME='2026-07-11T14-18-39_tanh_32', hidden_size = 32, activation='tanh')
 # print(f"Lambda1: {lyapunov_1}\nLambda2: {lyapunov_2}\nLambda3: {lyapunov_3}\n")
+
+lyapunov_1, lyapunov_2, lyapunov_3= analysis(r".\output\2026-07-15T10-14-37_small_model", MODEL_NAME="2026-07-15T10-14-37_small_model", hidden_size=4, activation='tanh')
+print(lyapunov_1, lyapunov_2, lyapunov_3)

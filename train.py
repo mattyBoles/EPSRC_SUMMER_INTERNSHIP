@@ -14,17 +14,18 @@ from plot import plot_model
 
 
 config = {
-    'NUM_EPOCHS': 2000,
-    'hidden_size': 4,
-    'n_traj': 80,
-    'traj_length': 100,
-    'activation': 'tanh'
+    'NUM_EPOCHS': 100,
+    'hidden_size': 6,
+    'n_traj': 100,
+    'traj_length': 800,
+    'activation': 'tanh',
+    'random_seed': 31,
 }
 def train_over_weekend(config):
     device = 'cuda:0' if torch.cuda.is_available() == True else 'cpu'
     print(device)
 
-    RANDOM_SEED = 42
+    RANDOM_SEED = config['random_seed']
 
     #REPRODUCABILITY
     torch.manual_seed(RANDOM_SEED)
@@ -32,7 +33,7 @@ def train_over_weekend(config):
     np.random.seed(RANDOM_SEED)
     torch.use_deterministic_algorithms(True)
 
-    MODEL_NAME = str(datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")) + '_' + f"{config['activation']}" + '_' + f"{str(config['hidden_size'])}"
+    MODEL_NAME = str(datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")) + '_small_model'
 
     output_dir = f'./output/{MODEL_NAME}/'
     os.makedirs(output_dir, exist_ok=True)
@@ -53,14 +54,14 @@ def train_over_weekend(config):
     mean = train_set.mean
     std = train_set.std
 
-    val_set = traj_Dataset(n_trajectories=int(n_trajectories/8),
+    val_set = traj_Dataset(n_trajectories=max(int(n_trajectories/8),4),
                             n_samples_per_traj=n_samples_per_traj,
                             n_transient=n_transient,
                             h=h,
                             mean = mean,
                             std = std)
 
-    test_set = traj_Dataset(n_trajectories=int(n_trajectories/8),
+    test_set = traj_Dataset(n_trajectories=max(int(n_trajectories/8),4),
                             n_samples_per_traj=n_samples_per_traj,
                             n_transient=n_transient,
                             h=h,
@@ -73,9 +74,9 @@ def train_over_weekend(config):
     NUM_EPOCHS = config['NUM_EPOCHS']
 
 
-    train_loader = torch.utils.data.DataLoader(train_set, batch_size = 32, shuffle=True)
-    val_loader = torch.utils.data.DataLoader(val_set, batch_size = 32, shuffle=False)
-    test_loader = torch.utils.data.DataLoader(test_set, batch_size = 32, shuffle=False)
+    train_loader = torch.utils.data.DataLoader(train_set, batch_size = 64, shuffle=True)
+    val_loader = torch.utils.data.DataLoader(val_set, batch_size = 64, shuffle=False)
+    test_loader = torch.utils.data.DataLoader(test_set, batch_size = 64, shuffle=False)
 
     model = tanh_model(config['hidden_size'], config['activation']).to(device)
 
@@ -92,29 +93,46 @@ def train_over_weekend(config):
                         optimiser = optimiser,
                         acc_fn = acc_fn,
                         NUM_EPOCHS = NUM_EPOCHS,
+                        std = std,
                         device = device)
+    
 
-    trn_loss, trn_acc, trn_targets, trn_preds = test(model = model,
+    torch.save(model.state_dict(), f'{output_dir}/{MODEL_NAME}_last_epoch.pth')
+
+    best_val_loss = train_results['val_loss'].index(min(train_results['val_loss']))
+    model.load_state_dict(train_results['model_statedict'][best_val_loss])
+    torch.save(model.state_dict(), f'{output_dir}/{MODEL_NAME}_best_epoch.pth')
+
+
+    trn_loss, trn_acc, trn_MSE, trn_targets, trn_preds = test(model = model,
                                                     dataloader = train_loader,
                                                     loss_fn = loss_fn,
                                                     acc_fn = acc_fn,
+                                                    std=std,
                                                     device = device)
-    val_loss, val_acc, val_targets, val_preds = test(model = model,
+    val_loss, val_acc, val_MSE, val_targets, val_preds = test(model = model,
                                                     dataloader = val_loader,
                                                     loss_fn = loss_fn,
                                                     acc_fn = acc_fn,
+                                                    std=std,
                                                     device = device)
-    test_loss, test_acc, test_targets, test_preds = test(model = model,
+    test_loss, test_acc, test_MSE, test_targets, test_preds = test(model = model,
                                                     dataloader = test_loader,
                                                     loss_fn = loss_fn,
                                                     acc_fn = acc_fn,
+                                                    std=std,
                                                     device = device)
+    
+
+    trn_MSE = [round(x.item(),4) for x in trn_MSE]
+    val_MSE = [round(x.item(),4) for x in val_MSE]
+    test_MSE = [round(x.item(),4) for x in test_MSE]
 
     print('\n\n')
     print('-----RESULTS-----')
-    print(f'| Train Loss : {trn_loss:.6f} | Train Average Euclidean Distance: {trn_acc} |\n')
-    print(f'| Val Loss : {val_loss:.6f} | Val Average Euclidean Distance: {val_acc} |\n')
-    print(f'| Test Loss : {test_loss:.6f} | Test Average Euclidean Distance: {test_acc} |\n')
+    print(f'| Train MSE : {trn_MSE} | Train Average Euclidean Distance: {trn_acc} |\n')
+    print(f'| Val MSE : {val_MSE} | Val Average Euclidean Distance: {val_acc} |\n')
+    print(f'| Test MSE : {test_MSE} | Test Average Euclidean Distance: {test_acc} |\n')
 
     torch.save(model.state_dict(), f'{output_dir}/{MODEL_NAME}_model.pth')
     torch.save(
@@ -157,6 +175,9 @@ def train_over_weekend(config):
             std = std,
             output_dir=output_dir,
             MODEL_NAME=MODEL_NAME)
+    
+
+    return MODEL_NAME
 
 
 
