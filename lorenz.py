@@ -1,9 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import Callable, Optional
-from dataclasses import dataclass
-
-
 
 class LorenzGenerator():
 
@@ -269,7 +266,28 @@ class LorenzGenerator():
                                transient_steps: int = 5000,
                                trajectory_steps: int = 10000,
                                QR_steps: int = 10,
-                               h: float = 0.01):
+                               dt: float = 0.01) -> dict:
+        '''
+        Class to run find the lyapunov spectrum, and singular values, of lorenz via accumulated SVs and Qr decomp of the Jacobian.
+        Jacobian is found every timestep and singular values are added to the list. Q is updated by the Jacobian via rk4 every step and
+        is renormalised every so often via QR decomposition. Then, at the end, they are logged and averaged to find Lyapunov spectrum.
+
+        Inputs:
+            x (np.ndarray): Starting point, shape (3,) for (x,y,z).
+            transient_steps (int): The number of steps to through away at the start to ensure we only start counting when we are on the attractor.
+            trajectory_steps (int): The number of timesteps (following transient) to iterate and average over.
+            QR_steps (int): The number of steps before Q is renormalised via QR decomp.
+            dt (float): The timestep.
+        
+        Returns:
+            dict:
+                'lyapunov_spectrum': np.ndarray, shape (3,) containing the found long-term averaged lyapunov spectrum.
+                'zdot': The time derivative of z, as an array.
+                'singular_values': A np.ndarray of shape (3, trajectory_steps//QR_steps).
+                'l_vectors': A list of length (trajectory_steps), containing U, the Left Vectors of SVD, which refer to the output directions fo teh singular values.
+                'r_vectors': A list of length (trajectory_steps), containing Vt, the Right Vectors of SVD, which show the input directions of the singular values.
+                'x_': A list of length (trajectory_steps), contianing the posiiton vector at each point.
+        '''
 
 
         #Initialise
@@ -281,18 +299,18 @@ class LorenzGenerator():
         x_ = []
 
         for i in range(transient_steps):
-            x, Q = self.rk4_matrix_and_x(f = self.calc_derivatives, J = self.J, x = x, U = Q,  h=h)
+            x, Q = self.rk4_matrix_and_x(f = self.calc_derivatives, J = self.J, x = x, U = Q,  h=dt)
 
             if (i+1) % QR_steps == 0:
                 Q, R = np.linalg.qr(Q)
                 
 
         for i in range(trajectory_steps):
-            x, Q = self.rk4_matrix_and_x(f = self.calc_derivatives, J = self.J, x = x, U = Q,  h=h)
+            x, Q = self.rk4_matrix_and_x(f = self.calc_derivatives, J = self.J, x = x, U = Q,  h=dt)
             x_.append(x)
             
             J = self.J(x)
-            J = np.eye(3) + h*J
+            J = np.eye(3) + dt*J
             U, S, Vt = np.linalg.svd(J)
 
             singular_values.append(S)
@@ -303,7 +321,7 @@ class LorenzGenerator():
             if (i+1) % QR_steps == 0:
                 
                 Q, R = np.linalg.qr(Q)
-                lambda_[:, count] = np.log(np.abs(np.diag(R))) / (h * QR_steps)
+                lambda_[:, count] = np.log(np.abs(np.diag(R))) / (dt * QR_steps)
                 count += 1
         
         lambda_ = lambda_[:, :count]

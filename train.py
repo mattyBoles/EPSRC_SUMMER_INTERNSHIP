@@ -5,23 +5,37 @@ import random
 import os
 import json
 from datetime import datetime, timezone
-from torch.optim.lr_scheduler import LinearLR,MultiStepLR
 
 from data import traj_Dataset
 from models import tanh_model, avg_euclidean_error
 from engine import train, test
 from plot import plot_model
+from model_analysis import analysis
 
 
-config = {
-    'NUM_EPOCHS': 100,
-    'hidden_size': 6,
-    'n_traj': 100,
-    'traj_length': 800,
-    'activation': 'tanh',
-    'random_seed': 31,
-}
-def train_over_weekend(config):
+def train_model(config:dict) -> tuple[str, float, float, float]:
+    '''
+    Trains a model from scratch and does some quick lyapunov analysis on it. Also creates a best_model (based on lowest val loss) and last_model .pth to be loaded,
+    stats.pt, which contain the mean and std of the train set for inferance, _MODEL_TRAJ, showing a typical trajectory,
+    and a trin json, shwoing loss, Avg EUclidean distance, hyperparameters, and Lyapunov spectrum.
+
+    Inputs:
+        config (dict):
+            'MODEL_NAME' (str): The name the model will be saved to.
+            'NUM_EPOCHS (int): The number of epochs to run for.
+            'hidden_size' (int): The width of the hidden layer.
+            'n_traj' (int): The numebr of different trajectories to train on.
+            'traj_length' (int): The number of consecutive points on each trajectory to train on.
+            'activation' (str): The activation to train on, namely 'relu', 'tanh', 'arctan', or 'softplus'.
+            'beta' (float): The beta parameter in softplus.
+            'random_seed' (int): The random seed to use for data geenration.
+
+    Returns:
+        MODEL_NAME (str): The folder that the model was saved to.
+        l1 (float): The first Lyapunov exponent.
+        l2 (float): The second Lyapunov exponent.
+        l3 (float): The third Lyapunov exponent.
+    '''
     device = 'cuda:0' if torch.cuda.is_available() == True else 'cpu'
     print(device)
 
@@ -33,7 +47,8 @@ def train_over_weekend(config):
     np.random.seed(RANDOM_SEED)
     torch.use_deterministic_algorithms(True)
 
-    MODEL_NAME = str(datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")) + '_small_model'
+    #MODEL_NAME = str(datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")) + '_6_width_model'
+    MODEL_NAME = config['MODEL_NAME']
 
     output_dir = f'./output/{MODEL_NAME}/'
     os.makedirs(output_dir, exist_ok=True)
@@ -44,41 +59,52 @@ def train_over_weekend(config):
     h = 0.01
 
 
+    train_dataset = torch.load(r'.\dataset\train_dataset.pt')
     train_set = traj_Dataset(n_trajectories=n_trajectories,
                             n_samples_per_traj=n_samples_per_traj,
                             n_transient=n_transient,
                             h=h,
                             mean = None,
-                            std = None)
+                            std = None,
+                            RANDOM_SEED = RANDOM_SEED,
+                            preloaded = train_dataset)
+    
 
     mean = train_set.mean
     std = train_set.std
 
+
+    val_dataset = torch.load(r'.\dataset\val_dataset.pt')
     val_set = traj_Dataset(n_trajectories=max(int(n_trajectories/8),4),
                             n_samples_per_traj=n_samples_per_traj,
                             n_transient=n_transient,
                             h=h,
                             mean = mean,
-                            std = std)
-
+                            std = std,
+                            RANDOM_SEED=RANDOM_SEED*10,
+                            preloaded = val_dataset)
+    
+    test_dataset = torch.load(r'.\dataset\test_dataset.pt')
     test_set = traj_Dataset(n_trajectories=max(int(n_trajectories/8),4),
                             n_samples_per_traj=n_samples_per_traj,
                             n_transient=n_transient,
                             h=h,
                             mean = mean,
-                            std = std)
+                            std = std,
+                            RANDOM_SEED=RANDOM_SEED*100,
+                            preloaded = test_dataset)
 
 
-    BATCH_SIZE = 32
+    BATCH_SIZE = 64
     lr = 0.001
     NUM_EPOCHS = config['NUM_EPOCHS']
 
 
-    train_loader = torch.utils.data.DataLoader(train_set, batch_size = 64, shuffle=True)
-    val_loader = torch.utils.data.DataLoader(val_set, batch_size = 64, shuffle=False)
-    test_loader = torch.utils.data.DataLoader(test_set, batch_size = 64, shuffle=False)
+    train_loader = torch.utils.data.DataLoader(train_set, batch_size = BATCH_SIZE, shuffle=True)
+    val_loader = torch.utils.data.DataLoader(val_set, batch_size = BATCH_SIZE, shuffle=False)
+    test_loader = torch.utils.data.DataLoader(test_set, batch_size = BATCH_SIZE, shuffle=False)
 
-    model = tanh_model(config['hidden_size'], config['activation']).to(device)
+    model = tanh_model(config['hidden_size'], config['activation'],RANDOM_SEED=RANDOM_SEED, beta = config['beta']).to(device)
 
     loss_fn = torch.nn.MSELoss()
     optimiser = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0)
@@ -134,7 +160,7 @@ def train_over_weekend(config):
     print(f'| Val MSE : {val_MSE} | Val Average Euclidean Distance: {val_acc} |\n')
     print(f'| Test MSE : {test_MSE} | Test Average Euclidean Distance: {test_acc} |\n')
 
-    torch.save(model.state_dict(), f'{output_dir}/{MODEL_NAME}_model.pth')
+
     torch.save(
         {"mean": mean, "std": std},
         f'{output_dir}/{MODEL_NAME}_stats.pt'
@@ -148,6 +174,9 @@ def train_over_weekend(config):
         if hasattr(x, "item"):  # torch.Tensor, np.generic
             x = x.item()
         return round(float(x), dp)
+    
+
+    l1, l2, l3, _ = analysis(MODEL_NAME=MODEL_NAME, hidden_size=config['hidden_size'], activation = config['activation'], beta = config['beta'])
 
     json_output = {
             "MODEL_NAME":MODEL_NAME,
@@ -156,12 +185,16 @@ def train_over_weekend(config):
             "TRAJ_LENGTH": config['traj_length'],
             "ACTIVATION": config['activation'],
             "HIDDEN_SIZE": config['hidden_size'],
+            'BETA': config['beta'],
             "TRAIN_LOSS": to_py_float(trn_loss),
             "TRAIN_AVERAGE_EUCLIDEAN_DISTANCE": to_py_float(trn_acc),
             "VAL_LOSS" : to_py_float(val_loss),
             "VAL_AVERAGE_EUCLIDEAN_DISTANCE": to_py_float(val_acc),
             "TEST_LOSS" : to_py_float(test_loss),
-            "TEST_AVERAGE_EUCLIDEAN_DISTANCE": to_py_float(test_acc)
+            "TEST_AVERAGE_EUCLIDEAN_DISTANCE": to_py_float(test_acc),
+            "Lyapunov1": l1,
+            "Lyapunov2": l2,
+            "Lyapunov3": l3,
         }
 
     with open(output_dir + f"{MODEL_NAME}_train.json", "w") as f:
@@ -177,10 +210,21 @@ def train_over_weekend(config):
             MODEL_NAME=MODEL_NAME)
     
 
-    return MODEL_NAME
+    return MODEL_NAME, l1, l2, l3
 
 
 
 
 if __name__ == '__main__':
-     train_over_weekend(config = config)
+    config = {
+        "MODEL_NAME": 's',
+        'NUM_EPOCHS': 200,
+        'hidden_size': 16,
+        'n_traj': 200,
+        'traj_length': 1600,
+        'activation': 'softplus',
+        'beta': 1.5,
+        'random_seed': 6
+    }
+
+    MODEL_NAME ,l1, l2, l3 = train_model(config=config)

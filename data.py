@@ -5,13 +5,8 @@ from lorenz import LorenzGenerator
 import random
 from typing import Optional
 
-RANDOM_SEED = 0
 
 #REPRODUCABILITY
-torch.manual_seed(RANDOM_SEED)
-random.seed(RANDOM_SEED)
-np.random.seed(RANDOM_SEED)
-torch.use_deterministic_algorithms(True)
 
 class traj_Dataset(torch.utils.data.Dataset):
     def __init__(self,
@@ -20,26 +15,39 @@ class traj_Dataset(torch.utils.data.Dataset):
                  n_transient: int,
                  h: int = 0.01, 
                  mean: Optional[torch.Tensor] = None,
-                 std: Optional[torch.Tensor] = None,):
+                 std: Optional[torch.Tensor] = None,
+                 preloaded: Optional[dict] = None,
+                 RANDOM_SEED = random.randint(1,100)):
         
+        torch.manual_seed(RANDOM_SEED)
+        random.seed(RANDOM_SEED)
+        np.random.seed(RANDOM_SEED)
+        torch.use_deterministic_algorithms(True)
         self.traj_generator = LorenzGenerator()
 
         self.n_trajectories = n_trajectories
         self.n_samples_per_traj = n_samples_per_traj
         self.n_transient = n_transient
         self.h = h
-
-        self.samples, self.targets = self.generate_samples()
-
-        if mean == None:
-            self.mean =torch.mean(self.samples, axis=0)
-            self.std =torch.std(self.samples, axis=0)
+        if preloaded is not None:
+            # Use saved data directly
+            self.samples = preloaded['samples']
+            self.targets = preloaded['targets']
+            self.mean = preloaded['mean']
+            self.std = preloaded['std']
         else:
-            self.mean = mean
-            self.std = std
-        
-        self.samples = (self.samples - self.mean) / self.std
-        self.targets = (self.targets - self.mean) / self.std
+
+            self.samples, self.targets = self.generate_samples()
+
+            if mean == None:
+                self.mean =torch.mean(self.samples, axis=0)
+                self.std =torch.std(self.samples, axis=0)
+            else:
+                self.mean = mean
+                self.std = std
+            
+            self.samples = (self.samples - self.mean) / self.std
+            self.targets = (self.targets - self.mean) / self.std
 
         print(f"Initialised Dataset:\n{self.n_trajectories} Trajectories \n{self.n_samples_per_traj} Samples per Trajectory\n{self.n_transient} Transient steps\nh = {self.h}")
 
@@ -73,7 +81,7 @@ class traj_Dataset(torch.utils.data.Dataset):
 
             point = point + r * directions
             traj = self.traj_generator.generate_trajectory(x0 = point,
-                                                    n_steps = (self.n_samples_per_traj),
+                                                    n_steps = (self.n_samples_per_traj+ self.n_transient),
                                                     h = self.h)
             traj = traj[self.n_transient+1:]
 
@@ -98,8 +106,16 @@ class traj_Dataset(torch.utils.data.Dataset):
         return self.samples[idx], self.targets[idx]
     
 if __name__ == '__main__':
-    dataset = traj_Dataset(n_trajectories=100, n_samples_per_traj=100, n_transient = 50)
-    print('done')
+    train_set = torch.load(r".\dataset\train_dataset.pt")
+    mean = train_set['mean']
+    std = train_set['std']
+    dataset = traj_Dataset(n_trajectories=32, n_samples_per_traj=200, n_transient = 5000, mean = mean, std = std)
+    torch.save({
+        'samples': dataset.samples,
+        'targets': dataset.targets,
+        'mean': dataset.mean,
+        'std': dataset.std
+    }, r'.\dataset\val_dataset.pt')
 
 
 

@@ -11,3 +11,9 @@ newest/
 weekend.py
 read_json.py
 compare_models.py
+animated.py
+jacobian_compare.py
+neuron_contraction_contribution.py
+pdf.py
+rollout.py
+theory.docx
