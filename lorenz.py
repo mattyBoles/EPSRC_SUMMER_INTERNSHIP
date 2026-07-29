@@ -192,7 +192,8 @@ class LorenzGenerator():
 
         if traj2 is not None:
             x, y, z = traj2[:,0], traj2[:,1], traj2[:,2]
-            ax.plot(x, y, z, lw=1, c='r', alpha=0.5)      
+            ax.plot(x, y, z, lw=1, c='r', alpha=0.5)    
+        #plt.show()  
         plt.savefig(png_name)
         plt.close('all')
         
@@ -344,41 +345,9 @@ if __name__ == '__main__':
     
     generator = LorenzGenerator()
 
-    # #Dominant Lyapunov Exponent
-    d_lyapunov_exp = generator.find_lyapunov_exponent(x=np.array([1,1,0]))
-    print(f'Dominant Lyapunov Exponent: {d_lyapunov_exp}')
+    traj = generator.generate_trajectory(x0=np.array([1,1,0]), n_steps=10000)
 
-    #Lyapunov Spectrum
-    results = generator.find_lyapunov_spectrum(x=np.array([1,1,0]))
-    zdot = results['zdot']
-    singular_values = results['singular_values']
-    singular_values = np.array(singular_values)
-    fig, axes = plt.subplots(2,1)
-
-    x = np.array(results['x_'])
-    mask = x[:,0] > 0
-
-
-    axes[0].plot(singular_values[3500:4500,0], label = 'sigma_1')
-    axes[0].plot(singular_values[3500:4500,1], label = 'sigma_2')
-    axes[0].plot(singular_values[3500:4500,2], label = 'sigma_3')
-    axes[0].legend()
-    axes[0].set_title('Lorenz - Discretized Propogator Singular Values')
-    axes[0].set_xlabel('timestep, h = 0.01')
-    axes[0].set_ylabel('SV')
-    axes[1].scatter(range(1000), zdot[3500:4500], c=mask[3500:4500], cmap='coolwarm', s=2)
-    axes[1].set_title('Lorenz - Zdot')
-    axes[1].set_xlabel('timestep, h = 0.01')
-    axes[1].set_ylabel('zdot')
-    plt.savefig('zdot_sv.png')
-    plt.show()
-    
-
-    plt.close('all')
-
-
-    #print(f"Lambda1: {lyapunov_spectrum[0]}\nLambda2: {lyapunov_spectrum[1]}\nLambda3: {lyapunov_spectrum[2]}\n")
-
+    generator.plot('',traj)
 
     
 

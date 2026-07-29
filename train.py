@@ -5,12 +5,14 @@ import random
 import os
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 
 from data import traj_Dataset
-from models import tanh_model, avg_euclidean_error
+from models import tanh_model, avg_euclidean_error, parameterised_beta_model
 from engine import train, test
 from plot import plot_model
 from model_analysis import analysis
+from li_and_ravela import W1, b1, W2, b2
 
 
 def train_model(config:dict) -> tuple[str, float, float, float]:
@@ -59,44 +61,39 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
     h = 0.01
 
 
-    train_dataset = torch.load(r'.\dataset\train_dataset.pt')
     train_set = traj_Dataset(n_trajectories=n_trajectories,
                             n_samples_per_traj=n_samples_per_traj,
                             n_transient=n_transient,
                             h=h,
                             mean = None,
                             std = None,
-                            RANDOM_SEED = RANDOM_SEED,
-                            preloaded = train_dataset)
+                            RANDOM_SEED = RANDOM_SEED)
     
 
     mean = train_set.mean
     std = train_set.std
 
 
-    val_dataset = torch.load(r'.\dataset\val_dataset.pt')
+
     val_set = traj_Dataset(n_trajectories=max(int(n_trajectories/8),4),
                             n_samples_per_traj=n_samples_per_traj,
                             n_transient=n_transient,
                             h=h,
                             mean = mean,
                             std = std,
-                            RANDOM_SEED=RANDOM_SEED*10,
-                            preloaded = val_dataset)
+                            RANDOM_SEED=RANDOM_SEED*10)
     
-    test_dataset = torch.load(r'.\dataset\test_dataset.pt')
     test_set = traj_Dataset(n_trajectories=max(int(n_trajectories/8),4),
                             n_samples_per_traj=n_samples_per_traj,
                             n_transient=n_transient,
                             h=h,
                             mean = mean,
                             std = std,
-                            RANDOM_SEED=RANDOM_SEED*100,
-                            preloaded = test_dataset)
+                            RANDOM_SEED=RANDOM_SEED*100)
 
 
     BATCH_SIZE = 64
-    lr = 0.001
+    lr = 1e-6
     NUM_EPOCHS = config['NUM_EPOCHS']
 
 
@@ -104,7 +101,13 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
     val_loader = torch.utils.data.DataLoader(val_set, batch_size = BATCH_SIZE, shuffle=False)
     test_loader = torch.utils.data.DataLoader(test_set, batch_size = BATCH_SIZE, shuffle=False)
 
-    model = tanh_model(config['hidden_size'], config['activation'],RANDOM_SEED=RANDOM_SEED, beta = config['beta']).to(device)
+    model = tanh_model(config['hidden_size'], config['activation'], RANDOM_SEED=RANDOM_SEED, beta=1).to(device)
+
+    with torch.no_grad():
+        model.linear1.weight.copy_(torch.tensor(W1, dtype=model.linear1.weight.dtype))
+        model.linear1.bias.copy_(torch.tensor(b1.squeeze(), dtype=model.linear1.weight.dtype))
+        model.linear2.weight.copy_(torch.tensor(W2, dtype=model.linear1.weight.dtype))
+        model.linear2.bias.copy_(torch.tensor(b2.squeeze(), dtype=model.linear1.weight.dtype))
 
     loss_fn = torch.nn.MSELoss()
     optimiser = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0)
@@ -174,28 +177,34 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
         if hasattr(x, "item"):  # torch.Tensor, np.generic
             x = x.item()
         return round(float(x), dp)
-    
 
-    l1, l2, l3, _ = analysis(MODEL_NAME=MODEL_NAME, hidden_size=config['hidden_size'], activation = config['activation'], beta = config['beta'])
 
     json_output = {
-            "MODEL_NAME":MODEL_NAME,
-            "NUM_EPOCHS": config['NUM_EPOCHS'],
-            "NUM_TRAJ": config['n_traj'],
-            "TRAJ_LENGTH": config['traj_length'],
-            "ACTIVATION": config['activation'],
-            "HIDDEN_SIZE": config['hidden_size'],
-            'BETA': config['beta'],
-            "TRAIN_LOSS": to_py_float(trn_loss),
-            "TRAIN_AVERAGE_EUCLIDEAN_DISTANCE": to_py_float(trn_acc),
-            "VAL_LOSS" : to_py_float(val_loss),
-            "VAL_AVERAGE_EUCLIDEAN_DISTANCE": to_py_float(val_acc),
-            "TEST_LOSS" : to_py_float(test_loss),
-            "TEST_AVERAGE_EUCLIDEAN_DISTANCE": to_py_float(test_acc),
+        "MODEL_NAME":MODEL_NAME,
+        "NUM_EPOCHS": config['NUM_EPOCHS'],
+        "NUM_TRAJ": config['n_traj'],
+        "TRAJ_LENGTH": config['traj_length'],
+        "ACTIVATION": config['activation'],
+        "HIDDEN_SIZE": config['hidden_size'],
+        'BETA': config['beta'],
+        "TRAIN_LOSS": to_py_float(trn_loss),
+        "TRAIN_AVERAGE_EUCLIDEAN_DISTANCE": to_py_float(trn_acc),
+        "VAL_LOSS" : to_py_float(val_loss),
+        "VAL_AVERAGE_EUCLIDEAN_DISTANCE": to_py_float(val_acc),
+        "TEST_LOSS" : to_py_float(test_loss),
+        "TEST_AVERAGE_EUCLIDEAN_DISTANCE": to_py_float(test_acc)}
+
+    with open(output_dir + f"{MODEL_NAME}_train.json", "w") as f:
+        json.dump(json_output, f, indent=2, default=str)
+    
+
+    l1, l2, l3, _ = analysis(MODEL_NAME=MODEL_NAME,beta = config['beta'])
+
+    json_output.update({
             "Lyapunov1": l1,
             "Lyapunov2": l2,
             "Lyapunov3": l3,
-        }
+        })
 
     with open(output_dir + f"{MODEL_NAME}_train.json", "w") as f:
             json.dump(json_output, f, indent=2, default=str)
@@ -217,13 +226,13 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
 
 if __name__ == '__main__':
     config = {
-        "MODEL_NAME": 's',
-        'NUM_EPOCHS': 200,
-        'hidden_size': 16,
-        'n_traj': 200,
-        'traj_length': 1600,
-        'activation': 'softplus',
-        'beta': 1.5,
+        "MODEL_NAME": 'li_and_ravela',
+        'NUM_EPOCHS': 1000,
+        'hidden_size': 4,
+        'n_traj': 100,
+        'traj_length': 20,
+        'activation': 'tanh',
+        'beta': 1,
         'random_seed': 6
     }
 

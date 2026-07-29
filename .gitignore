@@ -17,3 +17,11 @@ neuron_contraction_contribution.py
 pdf.py
 rollout.py
 theory.docx
+animated_true.py
+animated.py
+compaer_initilaisation.py
+compare_softplus.py
+li_and_ravela.py
+*.txt
+specific_neurons.py
+plots.py

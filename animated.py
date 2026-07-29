@@ -34,8 +34,8 @@ def animated_fig_model(MODEL_NAME: str,
 
 
 
-    x_model = ((x - mean) / std).float()
-    x_model = x_model.detach().numpy()
+    #x_model = ((x - mean) / std).float()
+    x_model = x.detach().numpy()
 
     x_model_list = []
     x_real_list = []
@@ -65,6 +65,7 @@ def animated_fig_model(MODEL_NAME: str,
     line3_1, = ax3.plot([],[], lw=0.8)
     line3_2, = ax3.plot([],[], lw=0.8)
     line3_3, = ax3.plot([],[], lw=0.8)
+    line3_4, = ax3.plot([],[], lw=0.8)
 
 
 
@@ -90,17 +91,17 @@ def animated_fig_model(MODEL_NAME: str,
         # J = torch.autograd.functional.jacobian(model, x_jac)
         # J = J.squeeze().detach().numpy()
 
-
+        sch2 = sech_squared()
         z = W1@x_model.reshape(3,1) + b1.reshape(-1,1).detach().numpy()
-        h = d_dx_softplus(z,1.5)
-        z_list.append(z[13])
+        h = sch2(z)
+        #z_list.append(z[13])
         # if h_old is not None:
         #     h[13] = h_old
         #     z[13] = z_old
         J = (W2 @ np.diag(h.squeeze()) @ W1)
 
         
-        h_list.append(h[13])
+        h_list.append(np.array([h[0,0], h[1,0], h[2,0], h[3,0]]))
 
 
 
@@ -119,7 +120,7 @@ def animated_fig_model(MODEL_NAME: str,
             print(' t = []')
         
         x_model = W1 @ x_model.reshape(-1,1) + b1.reshape(-1,1).detach().numpy()
-        x_model = softplus(x_model, 1.5)
+        x_model = np.tanh(x_model)
         
         x_model =W2@(x_model)+ b2.reshape(-1,1).detach().numpy()
         
@@ -131,7 +132,7 @@ def animated_fig_model(MODEL_NAME: str,
 
             
 
-        x_model_list.append(((x_model[:,0]*std)+mean))
+        x_model_list.append(x_model)
         x_real_list.append(x)
 
         if len(x_model_list) > 2500:
@@ -146,54 +147,56 @@ def animated_fig_model(MODEL_NAME: str,
         t.append(count)
         if count == 1:
             continue
-        x_model_arr = np.asarray(x_model_list).squeeze()
-        line1.set_data(x_model_arr[:,0], x_model_arr[:,1])
-        line1.set_3d_properties(x_model_arr[:,2])
+        if count % 5 == 0:
+            x_model_arr = np.asarray(x_model_list).squeeze()
+            line1.set_data(x_model_arr[:,0], x_model_arr[:,1])
+            line1.set_3d_properties(x_model_arr[:,2])
 
 
-        sv_arr = np.asarray(sv_list)
-        h_arr = np.asarray(h_list)
-        delta_arr = np.asarray(delta_list)
-        z_arr = np.asarray(z_list)
-        v3_arr = np.asarray(v3_list)
-        # cj_arr1 = np.asarray(cj_list1)
-        # cj_arr2 = np.asarray(cj_list2)
-        # cj_arr3 = np.asarray(cj_list3)
-        line2_1.set_data(t, sv_arr[:,0])
-        line2_1.set_label('SV1')
-        line2_2.set_data(t, sv_arr[:,1])
-        line2_2.set_label('SV2')
-        line2_3.set_data(t, sv_arr[:,2])
-        line2_3.set_label('SV3')
-        line3_1.set_data(t, v3_arr[:,0])
-        line3_2.set_data(t, v3_arr[:,1])
-        line3_3.set_data(t, v3_arr[:,2])
-        # line3_1.set_label('h12 - contribution')
-        # line3_2.set_data(t, cj_arr2)
-        # line3_2.set_label('h13 - contribution')
-        # line3_3.set_data(t, cj_arr3)
-        # line3_3.set_label('h14 - contribution')
-        # line3_2.set_data(t, h_arr[:,1])
-        # line3_2.set_label('h10')
-        # line3_3.set_data(t, h_arr[:,2])
-        # line3_3.set_label('h11')
+            sv_arr = np.asarray(sv_list)
+            h_arr = np.asarray(h_list)
+            delta_arr = np.asarray(delta_list)
+            z_arr = np.asarray(z_list)
+            v3_arr = np.asarray(v3_list)
+            # cj_arr1 = np.asarray(cj_list1)
+            # cj_arr2 = np.asarray(cj_list2)
+            # cj_arr3 = np.asarray(cj_list3)
+            line2_1.set_data(t, sv_arr[:,0])
+            line2_1.set_label('SV1')
+            line2_2.set_data(t, sv_arr[:,1])
+            line2_2.set_label('SV2')
+            line2_3.set_data(t, sv_arr[:,2])
+            line2_3.set_label('SV3')
+            line3_1.set_data(t, h_arr[:,0])
+            line3_2.set_data(t, h_arr[:,1])
+            line3_3.set_data(t, h_arr[:,2])
+            line3_4.set_data(t, h_arr[:,3])
+            # line3_1.set_label('h12 - contribution')
+            # line3_2.set_data(t, cj_arr2)
+            # line3_2.set_label('h13 - contribution')
+            # line3_3.set_data(t, cj_arr3)
+            # line3_3.set_label('h14 - contribution')
+            # line3_2.set_data(t, h_arr[:,1])
+            # line3_2.set_label('h10')
+            # line3_3.set_data(t, h_arr[:,2])
+            # line3_3.set_label('h11')
 
 
 
-        if count % 50 == 0:
-            ax2.set_xlim([t[-1] - 750, t[-1] + 250])
-            ax2.relim()           # recompute limits from data
-            ax2.autoscale_view()
-            ax2.legend()
-            ax3.set_xlim([t[-1] - 750, t[-1] + 250])
-            ax3.relim()           # recompute limits from data
-            ax3.autoscale_view()
-            ax3.legend()
-            # ax2.set_ylim([0.75, 1.15])
-            # ax4.set_xlim([t[-1] - 750, t[-1] + 250])
-            # ax4.set_ylim([0.75, 1.15])
+            if count % 50 == 0:
+                ax2.set_xlim([t[-1] - 750, t[-1] + 250])
+                ax2.relim()           # recompute limits from data
+                ax2.autoscale_view()
+                ax2.legend()
+                ax3.set_xlim([t[-1] - 750, t[-1] + 250])
+                ax3.relim()           # recompute limits from data
+                ax3.autoscale_view()
+                ax3.legend()
+                # ax2.set_ylim([0.75, 1.15])
+                # ax4.set_xlim([t[-1] - 750, t[-1] + 250])
+                # ax4.set_ylim([0.75, 1.15])
 
-        plt.pause(0.05)
+            plt.pause(0.05)
     
     plt.close('all')
 
@@ -216,9 +219,9 @@ def d_dx_softplus(x, beta):
 if __name__ == "__main__":
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    animated_fig_model(MODEL_NAME="softplus_beta=0.75_model",
-                       hidden_size = 16,
-                       activation = "softplus",
-                       x = torch.tensor([[1,1,0]]),
+    animated_fig_model(MODEL_NAME="li_and_ravela",
+                       hidden_size = 4,
+                       activation = "tanh",
+                       x = torch.tensor([[1,1,1]]),
                        device = device
                        )

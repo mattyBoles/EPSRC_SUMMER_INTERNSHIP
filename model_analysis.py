@@ -2,8 +2,9 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import json
+import os
 
-from models import tanh_model
+from models import tanh_model, parameterised_beta_model
 from lorenz import LorenzGenerator
 from pathlib import Path
 
@@ -32,7 +33,7 @@ def analysis(MODEL_NAME: str,
             activation = model_info['ACTIVATION']
             hidden_size = model_info['HIDDEN_SIZE']
 
-    model = tanh_model(hidden_size, activation=activation, beta = beta)
+    model = tanh_model(hidden_units=hidden_size, activation='tanh').to(device)
     model.load_state_dict(torch.load(Path(root_folder,MODEL_NAME+"_best_epoch.pth")))
     model = model.to(device)
 
@@ -62,6 +63,7 @@ def analysis(MODEL_NAME: str,
     Q = np.eye(3)
     lambda_ = np.empty((3,0))
     x = torch.tensor([[np.random.uniform(-20, 20), np.random.uniform(-20, 20), np.random.uniform(0,50)]])
+    #x = torch.tensor([[2,4,9]])
     x = (x - mean)/std
     for i in range(transient_steps):
         x = x.float()
@@ -99,35 +101,15 @@ def analysis(MODEL_NAME: str,
     return Lyapunov_spectrum[0], Lyapunov_spectrum[1],Lyapunov_spectrum[2], singular_values
 
 if __name__ == '__main__':
-    lyapunov_11, lyapunov_21, lyapunov_31, sv1 = analysis(MODEL_NAME="2026-07-22T14-46-52n_traj_500", hidden_size=8, activation='tanh', beta=1)
-    # lyapunov_12, lyapunov_22, lyapunov_32, sv2 = analysis(MODEL_NAME="2026-07-20T09-57-15tanh64", hidden_size=64, activation='tanh', beta=1.5)
+    l1, l2, l3 = [],[],[]
+    # for _ in range(20):
+    lyapunov_11, lyapunov_21, lyapunov_31, sv1 = analysis(MODEL_NAME="2026-07-11T07-49-10_tanh_4",beta=1)
+        # l1.append(lyapunov_11)
+        # l2.append(lyapunov_21)
+        # l3.append(lyapunov_31)
 
-    c = LorenzGenerator()
-    singular_values_real = c.find_lyapunov_spectrum(x = np.array([1,1,0]))['singular_values']
+    # l1 = np.mean(np.asarray(l1))
+    # l2 = np.mean(np.asarray(l2))
+    # l3 = np.mean(np.asarray(l3))
 
-    sv_real = np.array(singular_values_real)
-
-
-    fig, axes = plt.subplots(2,1)
-
-    axes[0].plot(sv1[:1000, 0], label = 'sigma1-softplus, 0.5')
-    axes[0].plot(sv1[:1000, 1], label = 'sigma2-softplus, 0.5')
-    axes[0].plot(sv1[:1000, 2], label = 'sigma3-softplus, 0.5')
-
-    # axes[0].plot(sv1[:1000, 0], label = 'sigma1-softplus, 1')
-    # axes[1].plot(sv1[:1000, 1], label = 'sigma2-softplus, 1')
-    # axes[2].plot(sv1[:1000, 2], label = 'sigma3-softplus, 1')
-    # axes[2].axhline(y=0.8, color='r', linestyle='--', label='y=0.8')
-    # axes[2].axhline(y=0.75, color='g', linestyle='--', label='y=0.75')
-    # axes[2].axhline(y=0.85, color='b', linestyle='--', label='y=0.85')
-
-    axes[1].plot(sv_real[:1000, 0], label = 'sigma1-real')
-    axes[1].plot(sv_real[:1000, 1], label = 'sigma2-real')
-    axes[1].plot(sv_real[:1000, 2], label = 'sigma3-real')
-
-
-    axes[0].legend()
-    axes[1].legend()
-    # axes[2].legend()
-
-    plt.show()
+    print(f"Lyapunov1: {lyapunov_11}\nLyapunov2: {lyapunov_21}\nLyapunov3: {lyapunov_31}\n")
