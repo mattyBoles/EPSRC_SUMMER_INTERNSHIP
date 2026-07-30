@@ -106,7 +106,7 @@ def analysis(MODEL_NAME: str,
 if __name__ == '__main__':
     l1, l2, l3 = [],[],[]
     # for _ in range(20):
-    lyapunov_11, lyapunov_21, lyapunov_31, sv1 = analysis(MODEL_NAME="li_and_ravela")
+    lyapunov_11, lyapunov_21, lyapunov_31, sv1 = analysis(MODEL_NAME="ralph_loop")
     #     l1.append(lyapunov_11)
     #     l2.append(lyapunov_21)
     #     l3.append(lyapunov_31)
@@ -140,5 +140,8 @@ if __name__ == '__main__':
     fig.tight_layout()
     plt.show()
 
+
+    print(f"REal: {sv_real[:,2].min()}")
+    print(f"Model: {sv1[:,2].min()}")    
 
     print(f"Lyapunov1: {l1}\nLyapunov2: {l2}\nLyapunov3: {l3}\n")
