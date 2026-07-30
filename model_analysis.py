@@ -36,7 +36,7 @@ def analysis(MODEL_NAME: str,
             hidden_size = model_info['HIDDEN_SIZE']
             beta = model_info['BETA']
 
-    model = parameterised_beta_model(hidden_units=hidden_size).to(device)
+    model = tanh_model(hidden_units=hidden_size, activation=activation, beta=beta).to(device)
     model.load_state_dict(torch.load(Path(root_folder,MODEL_NAME+"_best_epoch.pth")))
     model = model.to(device)
 

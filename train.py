@@ -10,7 +10,7 @@ from pathlib import Path
 from data import traj_Dataset
 from models import tanh_model, avg_euclidean_error, parameterised_beta_model
 from engine import train, test
-from plot import plot_model
+from plot import plot_model, plot_loss
 from model_analysis import analysis
 from li_and_ravela import W1, b1, W2, b2
 
@@ -103,7 +103,6 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
     test_loader = torch.utils.data.DataLoader(test_set, batch_size = len(test_set), shuffle=False)
 
     model = tanh_model(config['hidden_size'], config['activation'], RANDOM_SEED=RANDOM_SEED, beta=config['beta']).to(device)
-    model = parameterised_beta_model(config['hidden_size'], config['random_seed'])
 
     loss_fn = torch.nn.MSELoss()
     optimiser = torch.optim.LBFGS(
@@ -199,16 +198,16 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
         json.dump(output_dict, f, indent=2, default=str)
     
 
-    ly1, ly2, ly3 = [],[],[]
-    for _ in range(20):
-        l1, l2, l3, _ = analysis(MODEL_NAME=MODEL_NAME)
-        ly1.append(l1)
-        ly2.append(l2)
-        ly3.append(l3)
+    # ly1, ly2, ly3 = [],[],[]
+    # for _ in range(20):
+    l1, l2, l3, _ = analysis(MODEL_NAME=MODEL_NAME)
+    #     ly1.append(l1)
+    #     ly2.append(l2)
+    #     ly3.append(l3)
     
-    l1 = np.mean(np.asarray(ly1))
-    l2 = np.mean(np.asarray(ly2))
-    l3 = np.mean(np.asarray(ly3))
+    # l1 = np.mean(np.asarray(ly1))
+    # l2 = np.mean(np.asarray(ly2))
+    # l3 = np.mean(np.asarray(ly3))
 
 
     output_dict.update({
@@ -228,6 +227,9 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
             std = std,
             output_dir=output_dir,
             MODEL_NAME=MODEL_NAME)
+
+    plot_loss(trn_results = train_results,
+              output_dir=output_dir)
     
 
     return MODEL_NAME, l1, l2, l3, model.linear1.weight, trn_loss, test_loss
@@ -239,11 +241,11 @@ if __name__ == '__main__':
     config = {
         "MODEL_NAME": 'tester',
         'NUM_EPOCHS': 200,
-        'hidden_size': 16,
-        'n_traj': 256,
-        'traj_length': 200,
+        'hidden_size': 4,
+        'n_traj': 100,
+        'traj_length': 5,
         'activation': 'softplus',
         'beta': 1,
-        'random_seed': 178}
+        'random_seed': 177}
 
     output = train_model(config=config)

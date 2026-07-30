@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from lorenz import LorenzGenerator
+from pathlib import Path
 
 def plot_model(model:torch.nn.Module,
                x0:np.ndarray,
@@ -41,5 +42,23 @@ def plot_model(model:torch.nn.Module,
 
     generator.plot(png_name = f'{output_dir}/{MODEL_NAME}_MODEL_TRAJ.png', traj1=np.array(x_model), traj2 = None)
 
+
+
+def plot_loss(trn_results: dict,
+              output_dir: str) -> None:
+    train_loss = trn_results['train_loss']
+    val_loss = trn_results['val_loss']
+    epochs = np.arange(1,len(train_loss)+1, 1)
+
+    fig, ax = plt.subplots()
+    ax.plot(epochs, np.log(np.asarray(train_loss)), label = 'Train MSE')
+    ax.plot(epochs, np.log(np.asarray(val_loss)), label = 'Val MSE')
+    ax.set_xlabel('Epochs')
+    ax.set_ylabel('MSE')
+    ax.set_title('Train and Validation Loss over Epochs')
+    ax.legend()
+
+    output_path = Path(output_dir, Path(output_dir).parts[-1] + '_loss_curve.png')
+    plt.savefig(output_path)
 
 

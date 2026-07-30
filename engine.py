@@ -143,7 +143,6 @@ def train(model,
 
         if epoch % 10 == 0:
             print(f'| Epoch {epoch} |\n| Train Loss : {train_loss} | Train Average Euclidean Distance: {train_acc} |\n| Val Loss : {val_loss} | Val Average Euclidean Distance: {val_acc} |')
-            print(model.linear1.weight)
 
     return results    
     
