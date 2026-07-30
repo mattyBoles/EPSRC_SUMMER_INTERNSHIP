@@ -232,7 +232,7 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
               output_dir=output_dir)
     
 
-    return MODEL_NAME, l1, l2, l3, model.linear1.weight, trn_loss, test_loss
+    return output_dict
 
 
 
