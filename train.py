@@ -33,10 +33,10 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
             'random_seed' (int): The random seed to use for data geenration.
 
     Returns:
-        MODEL_NAME (str): The folder that the model was saved to.
-        l1 (float): The first Lyapunov exponent.
-        l2 (float): The second Lyapunov exponent.
-        l3 (float): The third Lyapunov exponent.
+        dict: A dictionary containing:
+            "MODEL_NAME", "NUM_EPOCHS", "NUM_TRAJ", "TRAJ_LENGTH", "ACTIVATION", "HIDDEN_SIZE", "TRAIN_LOSS", "TRAIN_AVERAGE_EUCLIDEAN_DISTANCE", "VAL_LOSS", 
+            "VAL_AVERAGE_EUCLIDEAN_DISTANCE", "TEST_LOSS", "TEST_AVERAGE_EUCLIDEAN_DISTANCE", "Lyapunov1", "Lyapunov2", "Lyapunov3",
+
     '''
     device = 'cuda:0' if torch.cuda.is_available() == True else 'cpu'
     print(device)
@@ -58,13 +58,13 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
     n_trajectories = config['n_traj']
     n_samples_per_traj = config['traj_length']
     n_transient = 5000
-    h = 0.01
+    dt = 0.01
 
 
     train_set = traj_Dataset(n_trajectories=n_trajectories,
                             n_samples_per_traj=n_samples_per_traj,
                             n_transient=n_transient,
-                            h=h,
+                            dt=dt,
                             mean = None,
                             std = None,
                             RANDOM_SEED = RANDOM_SEED)
@@ -78,7 +78,7 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
     val_set = traj_Dataset(n_trajectories=max(int(n_trajectories/8),4),
                             n_samples_per_traj=n_samples_per_traj,
                             n_transient=n_transient,
-                            h=h,
+                            dt=dt,
                             mean = mean,
                             std = std,
                             RANDOM_SEED=RANDOM_SEED*10)
@@ -86,7 +86,7 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
     test_set = traj_Dataset(n_trajectories=max(int(n_trajectories/8),4),
                             n_samples_per_traj=n_samples_per_traj,
                             n_transient=n_transient,
-                            h=h,
+                            dt=dt,
                             mean = mean,
                             std = std,
                             RANDOM_SEED=RANDOM_SEED*100)
@@ -94,17 +94,27 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
 
     BATCH_SIZE = 64
     lr = 1e-3
+    lr = 1e-3
     NUM_EPOCHS = config['NUM_EPOCHS']
 
 
-    train_loader = torch.utils.data.DataLoader(train_set, batch_size = BATCH_SIZE, shuffle=True)
-    val_loader = torch.utils.data.DataLoader(val_set, batch_size = BATCH_SIZE, shuffle=False)
-    test_loader = torch.utils.data.DataLoader(test_set, batch_size = BATCH_SIZE, shuffle=False)
+    train_loader = torch.utils.data.DataLoader(train_set, batch_size = len(train_set), shuffle=True)
+    val_loader = torch.utils.data.DataLoader(val_set, batch_size = len(val_set), shuffle=False)
+    test_loader = torch.utils.data.DataLoader(test_set, batch_size = len(test_set), shuffle=False)
 
-    model = tanh_model(config['hidden_size'], config['activation'], RANDOM_SEED=RANDOM_SEED, beta=1).to(device)
+    model = tanh_model(config['hidden_size'], config['activation'], RANDOM_SEED=RANDOM_SEED, beta=config['beta']).to(device)
+    model = parameterised_beta_model(config['hidden_size'], config['random_seed'])
 
     loss_fn = torch.nn.MSELoss()
-    optimiser = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0)
+    optimiser = torch.optim.LBFGS(
+        model.parameters(),
+        lr=1.0,
+        max_iter=10000,
+        history_size=100,
+        tolerance_grad=1e-12,
+        tolerance_change=1e-15,
+        line_search_fn="strong_wolfe"
+    )
 
     acc_fn = avg_euclidean_error(mean = mean,
                                 std = std)
@@ -127,35 +137,32 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
     torch.save(model.state_dict(), f'{output_dir}/{MODEL_NAME}_best_epoch.pth')
 
 
-    trn_loss, trn_acc, trn_MSE, trn_targets, trn_preds = test(model = model,
-                                                    dataloader = train_loader,
-                                                    loss_fn = loss_fn,
-                                                    acc_fn = acc_fn,
-                                                    std=std,
-                                                    device = device)
-    val_loss, val_acc, val_MSE, val_targets, val_preds = test(model = model,
-                                                    dataloader = val_loader,
-                                                    loss_fn = loss_fn,
-                                                    acc_fn = acc_fn,
-                                                    std=std,
-                                                    device = device)
-    test_loss, test_acc, test_MSE, test_targets, test_preds = test(model = model,
-                                                    dataloader = test_loader,
-                                                    loss_fn = loss_fn,
-                                                    acc_fn = acc_fn,
-                                                    std=std,
-                                                    device = device)
+    trn_loss, trn_acc = test(model = model,
+                            dataloader = train_loader,
+                            loss_fn = loss_fn,
+                            acc_fn = acc_fn,
+                            std=std,
+                            device = device)
+    val_loss, val_acc = test(model = model,
+                            dataloader = val_loader,
+                            loss_fn = loss_fn,
+                            acc_fn = acc_fn,
+                            std=std,
+                            device = device)
+    test_loss, test_acc = test(model = model,
+                                dataloader = test_loader,
+                                loss_fn = loss_fn,
+                                acc_fn = acc_fn,
+                                std=std,
+                                device = device)
     
 
-    trn_MSE = [round(x.item(),4) for x in trn_MSE]
-    val_MSE = [round(x.item(),4) for x in val_MSE]
-    test_MSE = [round(x.item(),4) for x in test_MSE]
 
     print('\n\n')
     print('-----RESULTS-----')
-    print(f'| Train MSE : {trn_MSE} | Train Average Euclidean Distance: {trn_acc} |\n')
-    print(f'| Val MSE : {val_MSE} | Val Average Euclidean Distance: {val_acc} |\n')
-    print(f'| Test MSE : {test_MSE} | Test Average Euclidean Distance: {test_acc} |\n')
+    print(f'| Train MSE : {trn_loss:.5f} | Train Average Euclidean Distance: {trn_acc:.5f} |\n')
+    print(f'| Val MSE : {trn_loss:.5f} | Val Average Euclidean Distance: {val_acc:.5f} |\n')
+    print(f'| Test MSE : {test_loss:.5f} | Test Average Euclidean Distance: {test_acc:.5f} |\n')
 
 
     torch.save(
@@ -173,7 +180,7 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
         return round(float(x), dp)
 
 
-    json_output = {
+    output_dict = {
         "MODEL_NAME":MODEL_NAME,
         "NUM_EPOCHS": config['NUM_EPOCHS'],
         "NUM_TRAJ": config['n_traj'],
@@ -189,19 +196,29 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
         "TEST_AVERAGE_EUCLIDEAN_DISTANCE": to_py_float(test_acc)}
 
     with open(output_dir + f"{MODEL_NAME}_train.json", "w") as f:
-        json.dump(json_output, f, indent=2, default=str)
+        json.dump(output_dict, f, indent=2, default=str)
     
 
-    l1, l2, l3, _ = analysis(MODEL_NAME=MODEL_NAME,beta = config['beta'])
+    ly1, ly2, ly3 = [],[],[]
+    for _ in range(20):
+        l1, l2, l3, _ = analysis(MODEL_NAME=MODEL_NAME)
+        ly1.append(l1)
+        ly2.append(l2)
+        ly3.append(l3)
+    
+    l1 = np.mean(np.asarray(ly1))
+    l2 = np.mean(np.asarray(ly2))
+    l3 = np.mean(np.asarray(ly3))
 
-    json_output.update({
+
+    output_dict.update({
             "Lyapunov1": l1,
             "Lyapunov2": l2,
             "Lyapunov3": l3,
         })
 
     with open(output_dir + f"{MODEL_NAME}_train.json", "w") as f:
-            json.dump(json_output, f, indent=2, default=str)
+            json.dump(output_dict, f, indent=2, default=str)
 
 
     plot_model(model = model,
@@ -227,7 +244,6 @@ if __name__ == '__main__':
         'traj_length': 200,
         'activation': 'softplus',
         'beta': 1,
-        'random_seed': 6
-    }
+        'random_seed': 178}
 
-    MODEL_NAME ,l1, l2, l3 = train_model(config=config)
+    output = train_model(config=config)

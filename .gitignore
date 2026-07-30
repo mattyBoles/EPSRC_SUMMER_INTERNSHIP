@@ -25,3 +25,5 @@ li_and_ravela.py
 *.txt
 specific_neurons.py
 plots.py
+read_log.py
+animated*
