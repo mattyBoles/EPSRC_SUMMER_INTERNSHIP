@@ -93,24 +93,32 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
 
 
     BATCH_SIZE = 64
-    lr = 1e-6
+    lr = 1e-3
     NUM_EPOCHS = config['NUM_EPOCHS']
 
 
-    train_loader = torch.utils.data.DataLoader(train_set, batch_size = BATCH_SIZE, shuffle=True)
-    val_loader = torch.utils.data.DataLoader(val_set, batch_size = BATCH_SIZE, shuffle=False)
-    test_loader = torch.utils.data.DataLoader(test_set, batch_size = BATCH_SIZE, shuffle=False)
+    train_loader = torch.utils.data.DataLoader(train_set, batch_size = len(train_set), shuffle=True)
+    val_loader = torch.utils.data.DataLoader(val_set, batch_size = len(val_set), shuffle=False)
+    test_loader = torch.utils.data.DataLoader(test_set, batch_size = len(test_set), shuffle=False)
 
-    model = tanh_model(config['hidden_size'], config['activation'], RANDOM_SEED=RANDOM_SEED, beta=1).to(device)
+    model = tanh_model(config['hidden_size'], config['activation'], RANDOM_SEED=RANDOM_SEED, beta=config['beta']).to(device)
 
-    with torch.no_grad():
-        model.linear1.weight.copy_(torch.tensor(W1, dtype=model.linear1.weight.dtype))
-        model.linear1.bias.copy_(torch.tensor(b1.squeeze(), dtype=model.linear1.weight.dtype))
-        model.linear2.weight.copy_(torch.tensor(W2, dtype=model.linear1.weight.dtype))
-        model.linear2.bias.copy_(torch.tensor(b2.squeeze(), dtype=model.linear1.weight.dtype))
+    # with torch.no_grad():
+    #     model.linear1.weight.copy_(torch.tensor(W1, dtype=model.linear1.weight.dtype))
+    #     model.linear1.bias.copy_(torch.tensor(b1.squeeze(), dtype=model.linear1.weight.dtype))
+    #     model.linear2.weight.copy_(torch.tensor(W2, dtype=model.linear1.weight.dtype))
+    #     model.linear2.bias.copy_(torch.tensor(b2.squeeze(), dtype=model.linear1.weight.dtype))
 
     loss_fn = torch.nn.MSELoss()
-    optimiser = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0)
+    optimiser = torch.optim.LBFGS(
+        model.parameters(),
+        lr=1.0,
+        max_iter=10000,
+        history_size=100,
+        tolerance_grad=1e-12,
+        tolerance_change=1e-15,
+        line_search_fn="strong_wolfe"
+    )
 
     acc_fn = avg_euclidean_error(mean = mean,
                                 std = std)
@@ -133,35 +141,32 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
     torch.save(model.state_dict(), f'{output_dir}/{MODEL_NAME}_best_epoch.pth')
 
 
-    trn_loss, trn_acc, trn_MSE, trn_targets, trn_preds = test(model = model,
-                                                    dataloader = train_loader,
-                                                    loss_fn = loss_fn,
-                                                    acc_fn = acc_fn,
-                                                    std=std,
-                                                    device = device)
-    val_loss, val_acc, val_MSE, val_targets, val_preds = test(model = model,
-                                                    dataloader = val_loader,
-                                                    loss_fn = loss_fn,
-                                                    acc_fn = acc_fn,
-                                                    std=std,
-                                                    device = device)
-    test_loss, test_acc, test_MSE, test_targets, test_preds = test(model = model,
-                                                    dataloader = test_loader,
-                                                    loss_fn = loss_fn,
-                                                    acc_fn = acc_fn,
-                                                    std=std,
-                                                    device = device)
+    trn_loss, trn_acc = test(model = model,
+                            dataloader = train_loader,
+                            loss_fn = loss_fn,
+                            acc_fn = acc_fn,
+                            std=std,
+                            device = device)
+    val_loss, val_acc = test(model = model,
+                            dataloader = val_loader,
+                            loss_fn = loss_fn,
+                            acc_fn = acc_fn,
+                            std=std,
+                            device = device)
+    test_loss, test_acc = test(model = model,
+                                dataloader = test_loader,
+                                loss_fn = loss_fn,
+                                acc_fn = acc_fn,
+                                std=std,
+                                device = device)
     
 
-    trn_MSE = [round(x.item(),4) for x in trn_MSE]
-    val_MSE = [round(x.item(),4) for x in val_MSE]
-    test_MSE = [round(x.item(),4) for x in test_MSE]
 
     print('\n\n')
     print('-----RESULTS-----')
-    print(f'| Train MSE : {trn_MSE} | Train Average Euclidean Distance: {trn_acc} |\n')
-    print(f'| Val MSE : {val_MSE} | Val Average Euclidean Distance: {val_acc} |\n')
-    print(f'| Test MSE : {test_MSE} | Test Average Euclidean Distance: {test_acc} |\n')
+    print(f'| Train MSE : {trn_loss:.5f} | Train Average Euclidean Distance: {trn_acc:.5f} |\n')
+    print(f'| Val MSE : {trn_loss:.5f} | Val Average Euclidean Distance: {val_acc:.5f} |\n')
+    print(f'| Test MSE : {test_loss:.5f} | Test Average Euclidean Distance: {test_acc:.5f} |\n')
 
 
     torch.save(
@@ -198,7 +203,17 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
         json.dump(json_output, f, indent=2, default=str)
     
 
-    l1, l2, l3, _ = analysis(MODEL_NAME=MODEL_NAME,beta = config['beta'])
+    ly1, ly2, ly3 = [],[],[]
+    for _ in range(20):
+        l1, l2, l3, _ = analysis(MODEL_NAME=MODEL_NAME)
+        ly1.append(l1)
+        ly2.append(l2)
+        ly3.append(l3)
+    
+    l1 = np.mean(np.asarray(ly1))
+    l2 = np.mean(np.asarray(ly2))
+    l3 = np.mean(np.asarray(ly3))
+
 
     json_output.update({
             "Lyapunov1": l1,
@@ -226,14 +241,13 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
 
 if __name__ == '__main__':
     config = {
-        "MODEL_NAME": 'li_and_ravela',
-        'NUM_EPOCHS': 1000,
+        "MODEL_NAME": 'LBFGS_model',
+        'NUM_EPOCHS': 500,
         'hidden_size': 4,
         'n_traj': 100,
-        'traj_length': 20,
-        'activation': 'tanh',
+        'traj_length': 5,
+        'activation': 'softplus',
         'beta': 1,
-        'random_seed': 6
-    }
+        'random_seed': 169}
 
     MODEL_NAME ,l1, l2, l3 = train_model(config=config)

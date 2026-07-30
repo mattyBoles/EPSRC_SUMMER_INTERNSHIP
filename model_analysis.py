@@ -9,7 +9,6 @@ from lorenz import LorenzGenerator
 from pathlib import Path
 
 def analysis(MODEL_NAME: str,
-             beta: float,
              dt: float = 0.01,
              QR_steps: int = 10,
              transient_steps: int = 5000,
@@ -23,7 +22,10 @@ def analysis(MODEL_NAME: str,
     Every so often we renormalise Q and add thr diagonal of R to the list of lambdas to be averaged.
 
     Inputs:
-        MODEL_NAME
+        MODEL_NAME (str): Name of the model to analyse, as it appears in r".\\output\\"
+        dt (float): Length of the timestep.
+        QR_steps (int): Number of steps between each QR re-orthonormalisation and recording of lambda1,2,3
+
     '''
     
     root_folder = Path(r".\output", MODEL_NAME)
@@ -32,8 +34,9 @@ def analysis(MODEL_NAME: str,
             model_info = json.load(f)
             activation = model_info['ACTIVATION']
             hidden_size = model_info['HIDDEN_SIZE']
+            beta = model_info['BETA']
 
-    model = tanh_model(hidden_units=hidden_size, activation='tanh').to(device)
+    model = tanh_model(hidden_units=hidden_size, activation=activation, beta = beta).to(device)
     model.load_state_dict(torch.load(Path(root_folder,MODEL_NAME+"_best_epoch.pth")))
     model = model.to(device)
 
@@ -103,13 +106,39 @@ def analysis(MODEL_NAME: str,
 if __name__ == '__main__':
     l1, l2, l3 = [],[],[]
     # for _ in range(20):
-    lyapunov_11, lyapunov_21, lyapunov_31, sv1 = analysis(MODEL_NAME="2026-07-11T07-49-10_tanh_4",beta=1)
-        # l1.append(lyapunov_11)
-        # l2.append(lyapunov_21)
-        # l3.append(lyapunov_31)
+    lyapunov_11, lyapunov_21, lyapunov_31, sv1 = analysis(MODEL_NAME="li_and_ravela")
+    #     l1.append(lyapunov_11)
+    #     l2.append(lyapunov_21)
+    #     l3.append(lyapunov_31)
 
     # l1 = np.mean(np.asarray(l1))
     # l2 = np.mean(np.asarray(l2))
     # l3 = np.mean(np.asarray(l3))
 
-    print(f"Lyapunov1: {lyapunov_11}\nLyapunov2: {lyapunov_21}\nLyapunov3: {lyapunov_31}\n")
+    c = LorenzGenerator()
+    results = c.find_lyapunov_spectrum(x=np.array([2,4,9]))
+
+    sv_real = np.asarray(results['singular_values'])
+
+    fig, axes = plt.subplots(2,1)
+
+    axes[0].plot(sv1[:1000,0], label = 'SV1')
+    axes[0].plot(sv1[:1000,1], label = 'SV2')
+    axes[0].plot(sv1[:1000,2], label = 'SV3')
+    axes[0].set_title('Singular Value Decomposition- Model')
+    axes[0].set_xlabel('Timestep, dt = 0.01')
+    axes[0].set_ylabel('SV')
+    axes[0].legend()
+
+    axes[1].plot(sv_real[:1000,0], label = 'SV1')
+    axes[1].plot(sv_real[:1000,1], label = 'SV2')
+    axes[1].plot(sv_real[:1000,2], label = 'SV3')
+    axes[1].set_title('Singular Value Decomposition- True System')
+    axes[1].set_xlabel('Timestep, dt = 0.01')
+    axes[1].set_ylabel('SV')
+    axes[1].legend()
+    fig.tight_layout()
+    plt.show()
+
+
+    print(f"Lyapunov1: {l1}\nLyapunov2: {l2}\nLyapunov3: {l3}\n")
