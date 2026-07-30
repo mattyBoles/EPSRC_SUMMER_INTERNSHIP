@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from copy import deepcopy
 
+
 def train_epoch(model,
                 dataloader,
                 loss_fn,

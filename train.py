@@ -220,12 +220,12 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
 
 if __name__ == '__main__':
     config = {
-        "MODEL_NAME": 'li_and_ravela',
-        'NUM_EPOCHS': 1000,
-        'hidden_size': 4,
-        'n_traj': 100,
-        'traj_length': 20,
-        'activation': 'tanh',
+        "MODEL_NAME": 'tester',
+        'NUM_EPOCHS': 200,
+        'hidden_size': 16,
+        'n_traj': 256,
+        'traj_length': 200,
+        'activation': 'softplus',
         'beta': 1,
         'random_seed': 6
     }
