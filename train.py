@@ -203,16 +203,16 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
         json.dump(json_output, f, indent=2, default=str)
     
 
-    ly1, ly2, ly3 = [],[],[]
-    for _ in range(20):
-        l1, l2, l3, _ = analysis(MODEL_NAME=MODEL_NAME)
-        ly1.append(l1)
-        ly2.append(l2)
-        ly3.append(l3)
+    # ly1, ly2, ly3 = [],[],[]
+    # for _ in range(20):
+    l1, l2, l3, _ = analysis(MODEL_NAME=MODEL_NAME)
+        # ly1.append(l1)
+        # ly2.append(l2)
+        # ly3.append(l3)
     
-    l1 = np.mean(np.asarray(ly1))
-    l2 = np.mean(np.asarray(ly2))
-    l3 = np.mean(np.asarray(ly3))
+    # l1 = np.mean(np.asarray(ly1))
+    # l2 = np.mean(np.asarray(ly2))
+    # l3 = np.mean(np.asarray(ly3))
 
 
     json_output.update({
@@ -234,7 +234,7 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
             MODEL_NAME=MODEL_NAME)
     
 
-    return MODEL_NAME, l1, l2, l3
+    return MODEL_NAME, l1, l2, l3, model.linear1.weight, trn_loss, test_loss
 
 
 
