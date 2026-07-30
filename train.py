@@ -93,7 +93,7 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
 
 
     BATCH_SIZE = 64
-    lr = 1e-6
+    lr = 1e-3
     NUM_EPOCHS = config['NUM_EPOCHS']
 
 
@@ -102,12 +102,6 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
     test_loader = torch.utils.data.DataLoader(test_set, batch_size = BATCH_SIZE, shuffle=False)
 
     model = tanh_model(config['hidden_size'], config['activation'], RANDOM_SEED=RANDOM_SEED, beta=1).to(device)
-
-    with torch.no_grad():
-        model.linear1.weight.copy_(torch.tensor(W1, dtype=model.linear1.weight.dtype))
-        model.linear1.bias.copy_(torch.tensor(b1.squeeze(), dtype=model.linear1.weight.dtype))
-        model.linear2.weight.copy_(torch.tensor(W2, dtype=model.linear1.weight.dtype))
-        model.linear2.bias.copy_(torch.tensor(b2.squeeze(), dtype=model.linear1.weight.dtype))
 
     loss_fn = torch.nn.MSELoss()
     optimiser = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0)
@@ -219,7 +213,7 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
             MODEL_NAME=MODEL_NAME)
     
 
-    return MODEL_NAME, l1, l2, l3
+    return MODEL_NAME, l1, l2, l3, model.linear1.weight, trn_loss, test_loss
 
 
 
