@@ -33,7 +33,7 @@ def plot_model_retrun_map(MODEL_NAME: str,
     x = x0
     c = LorenzGenerator()
 
-    traj = c.generate_trajectory(x0=x, n_steps = (n_transient+n_steps), h=0.01)
+    traj = c.generate_trajectory(x0=x, n_steps = (n_transient+n_steps), dt=0.01)
 
     z = traj[n_transient:,2]
     peak_indices, _ = find_peaks(z, distance=20)  # distance prevents false peaks

@@ -33,10 +33,10 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
             'random_seed' (int): The random seed to use for data geenration.
 
     Returns:
-        MODEL_NAME (str): The folder that the model was saved to.
-        l1 (float): The first Lyapunov exponent.
-        l2 (float): The second Lyapunov exponent.
-        l3 (float): The third Lyapunov exponent.
+        dict: A dictionary containing:
+            "MODEL_NAME", "NUM_EPOCHS", "NUM_TRAJ", "TRAJ_LENGTH", "ACTIVATION", "HIDDEN_SIZE", "TRAIN_LOSS", "TRAIN_AVERAGE_EUCLIDEAN_DISTANCE", "VAL_LOSS", 
+            "VAL_AVERAGE_EUCLIDEAN_DISTANCE", "TEST_LOSS", "TEST_AVERAGE_EUCLIDEAN_DISTANCE", "Lyapunov1", "Lyapunov2", "Lyapunov3",
+
     '''
     device = 'cuda:0' if torch.cuda.is_available() == True else 'cpu'
     print(device)
@@ -58,13 +58,13 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
     n_trajectories = config['n_traj']
     n_samples_per_traj = config['traj_length']
     n_transient = 5000
-    h = 0.01
+    dt = 0.01
 
 
     train_set = traj_Dataset(n_trajectories=n_trajectories,
                             n_samples_per_traj=n_samples_per_traj,
                             n_transient=n_transient,
-                            h=h,
+                            dt=dt,
                             mean = None,
                             std = None,
                             RANDOM_SEED = RANDOM_SEED)
@@ -78,7 +78,7 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
     val_set = traj_Dataset(n_trajectories=max(int(n_trajectories/8),4),
                             n_samples_per_traj=n_samples_per_traj,
                             n_transient=n_transient,
-                            h=h,
+                            dt=dt,
                             mean = mean,
                             std = std,
                             RANDOM_SEED=RANDOM_SEED*10)
@@ -86,7 +86,7 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
     test_set = traj_Dataset(n_trajectories=max(int(n_trajectories/8),4),
                             n_samples_per_traj=n_samples_per_traj,
                             n_transient=n_transient,
-                            h=h,
+                            dt=dt,
                             mean = mean,
                             std = std,
                             RANDOM_SEED=RANDOM_SEED*100)
@@ -102,6 +102,7 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
     test_loader = torch.utils.data.DataLoader(test_set, batch_size = len(test_set), shuffle=False)
 
     model = tanh_model(config['hidden_size'], config['activation'], RANDOM_SEED=RANDOM_SEED, beta=config['beta']).to(device)
+    model = parameterised_beta_model(config['hidden_size'], config['random_seed'])
 
     # with torch.no_grad():
     #     model.linear1.weight.copy_(torch.tensor(W1, dtype=model.linear1.weight.dtype))
@@ -184,7 +185,7 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
         return round(float(x), dp)
 
 
-    json_output = {
+    output_dict = {
         "MODEL_NAME":MODEL_NAME,
         "NUM_EPOCHS": config['NUM_EPOCHS'],
         "NUM_TRAJ": config['n_traj'],
@@ -200,7 +201,7 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
         "TEST_AVERAGE_EUCLIDEAN_DISTANCE": to_py_float(test_acc)}
 
     with open(output_dir + f"{MODEL_NAME}_train.json", "w") as f:
-        json.dump(json_output, f, indent=2, default=str)
+        json.dump(output_dict, f, indent=2, default=str)
     
 
     ly1, ly2, ly3 = [],[],[]
@@ -215,14 +216,14 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
     l3 = np.mean(np.asarray(ly3))
 
 
-    json_output.update({
+    output_dict.update({
             "Lyapunov1": l1,
             "Lyapunov2": l2,
             "Lyapunov3": l3,
         })
 
     with open(output_dir + f"{MODEL_NAME}_train.json", "w") as f:
-            json.dump(json_output, f, indent=2, default=str)
+            json.dump(output_dict, f, indent=2, default=str)
 
 
     plot_model(model = model,
@@ -234,7 +235,7 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
             MODEL_NAME=MODEL_NAME)
     
 
-    return MODEL_NAME, l1, l2, l3, model.linear1.weight, trn_loss, test_loss, test_acc
+    return output_dict
 
 
 
@@ -243,11 +244,11 @@ if __name__ == '__main__':
     config = {
         "MODEL_NAME": 'LBFGS_model_16',
         'NUM_EPOCHS': 500,
-        'hidden_size': 16,
+        'hidden_size': 4,
         'n_traj': 100,
         'traj_length': 5,
         'activation': 'softplus',
         'beta': 1,
-        'random_seed': 171}
+        'random_seed': 178}
 
-    MODEL_NAME ,l1, l2, l3, w1, trn_loss, test_loss, test_acc = train_model(config=config)
+    output = train_model(config=config)

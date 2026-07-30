@@ -36,7 +36,7 @@ def analysis(MODEL_NAME: str,
             hidden_size = model_info['HIDDEN_SIZE']
             beta = model_info['BETA']
 
-    model = tanh_model(hidden_units=hidden_size, activation=activation, beta = beta).to(device)
+    model = parameterised_beta_model(hidden_units=hidden_size).to(device)
     model.load_state_dict(torch.load(Path(root_folder,MODEL_NAME+"_best_epoch.pth")))
     model = model.to(device)
 
@@ -53,7 +53,7 @@ def analysis(MODEL_NAME: str,
         - QR decompose: Q, R = qr(Q)
         - Accumulate: log_growth += log(abs(diag(R)))
         - Count: n_renorm += 1
-    5. Lyapunov = log_growth / (n_renorm * 10 * h)
+    5. Lyapunov = log_growth / (n_renorm * 10 * dt)
     '''
 
     Q = np.eye(3)
@@ -106,7 +106,7 @@ def analysis(MODEL_NAME: str,
 if __name__ == '__main__':
     l1, l2, l3 = [],[],[]
     # for _ in range(20):
-    lyapunov_11, lyapunov_21, lyapunov_31, sv1 = analysis(MODEL_NAME="ralph_loop")
+    lyapunov_11, lyapunov_21, lyapunov_31, sv1 = analysis(MODEL_NAME="ralph_loop_precise")
     #     l1.append(lyapunov_11)
     #     l2.append(lyapunov_21)
     #     l3.append(lyapunov_31)
@@ -120,23 +120,23 @@ if __name__ == '__main__':
 
     sv_real = np.asarray(results['singular_values'])
 
-    fig, axes = plt.subplots(2,1)
+    fig, axes = plt.subplots(3,1)
 
-    axes[0].plot(sv1[:1000,0], label = 'SV1')
-    axes[0].plot(sv1[:1000,1], label = 'SV2')
-    axes[0].plot(sv1[:1000,2], label = 'SV3')
+    axes[0].plot(sv1[:1000,0], label = 'SV1 - model')
+    axes[1].plot(sv1[:1000,1], label = 'SV2 - model')
+    axes[2].plot(sv1[:1000,2], label = 'SV3 - model')
     axes[0].set_title('Singular Value Decomposition- Model')
     axes[0].set_xlabel('Timestep, dt = 0.01')
     axes[0].set_ylabel('SV')
     axes[0].legend()
 
-    axes[1].plot(sv_real[:1000,0], label = 'SV1')
-    axes[1].plot(sv_real[:1000,1], label = 'SV2')
-    axes[1].plot(sv_real[:1000,2], label = 'SV3')
-    axes[1].set_title('Singular Value Decomposition- True System')
-    axes[1].set_xlabel('Timestep, dt = 0.01')
-    axes[1].set_ylabel('SV')
+    axes[0].plot(sv_real[:1000,0], label = 'SV1 - true')
+    axes[1].plot(sv_real[:1000,1], label = 'SV2 -  true')
+    axes[2].plot(sv_real[:1000,2], label = 'SV3 - true')
+
     axes[1].legend()
+    axes[0].legend()
+    axes[2].legend()
     fig.tight_layout()
     plt.show()
 

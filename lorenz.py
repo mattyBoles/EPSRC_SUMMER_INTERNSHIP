@@ -59,7 +59,7 @@ class LorenzGenerator():
     @staticmethod
     def rk4(f: Callable,
             x: np.ndarray,
-            h: float) -> np.ndarray:
+            dt: float) -> np.ndarray:
         
         '''
         Runge-Kutta 4th order time stepping scheme, to be used as ground truth.
@@ -68,20 +68,20 @@ class LorenzGenerator():
         Inputs: 
             f (Callable): The derivative function of the system.
             x (np.ndarray): The innput posotin vector, shape [x, y, z]
-            h (float): The timestep length.
+            dt (float): The timestep length.
         
         Returns:
             np.ndarray: The timestepped position vector.
         '''
         k1 = f(x)
 
-        k2 = f(x + (k1 * h/2))
+        k2 = f(x + (k1 * dt/2))
 
-        k3 = f(x + (k2 * h/2))
+        k3 = f(x + (k2 * dt/2))
 
-        k4 = f(x + (k3*h))
+        k4 = f(x + (k3*dt))
 
-        x = x + h*(k1 + 2*k2 + 2*k3 + k4)/6
+        x = x + dt*(k1 + 2*k2 + 2*k3 + k4)/6
 
         return x
     
@@ -101,7 +101,7 @@ class LorenzGenerator():
                          J: Callable,
                          x: np.ndarray,
                          U: np.ndarray,
-                         h: float) -> tuple[np.ndarray, np.ndarray]:
+                         dt: float) -> tuple[np.ndarray, np.ndarray]:
         
         '''
         Runge-Kutta 4th order time stepping scheme, to be used as ground truth. https://www.geeksforgeeks.org/dsa/runge-kutta-4th-order-method-solve-differential-equation/
@@ -112,7 +112,7 @@ class LorenzGenerator():
             J (Callable): The Jacobian function of the system, which returns a matrix with partial derivatives calculated at x.
             x_ (np.ndarray): The current position vector of the system.
             U (np.ndarray): The current tangent propogater of the system.
-            h (float): The delta t, timestep.
+            dt (float): The delta t, timestep.
         
         Returns:
             tuple[np.ndarray, np.ndarray]:
@@ -123,17 +123,17 @@ class LorenzGenerator():
         k1_x = f(x)
         k1_U = J(x) @ U
 
-        k2_x = f(x + (k1_x * h/2))
-        k2_U = J(x + (k1_x * h/2)) @ (U + (k1_U * h/2))
+        k2_x = f(x + (k1_x * dt/2))
+        k2_U = J(x + (k1_x * dt/2)) @ (U + (k1_U * dt/2))
 
-        k3_x = f(x + (k2_x * h/2))
-        k3_U = J(x + (k2_x * h/2)) @ (U + (k2_U * h/2))
+        k3_x = f(x + (k2_x * dt/2))
+        k3_U = J(x + (k2_x * dt/2)) @ (U + (k2_U * dt/2))
 
-        k4_x = f(x + (k3_x * h))
-        k4_U = J(x + (k3_x * h)) @ (U + (k3_U * h))
+        k4_x = f(x + (k3_x * dt))
+        k4_U = J(x + (k3_x * dt)) @ (U + (k3_U * dt))
 
-        x_new = x + (h/6 * (k1_x + 2*k2_x + 2*k3_x + k4_x))
-        U_new = U + (h/6 * (k1_U + 2*k2_U + 2*k3_U + k4_U))
+        x_new = x + (dt/6 * (k1_x + 2*k2_x + 2*k3_x + k4_x))
+        U_new = U + (dt/6 * (k1_U + 2*k2_U + 2*k3_U + k4_U))
 
 
         return x_new, U_new
@@ -142,7 +142,7 @@ class LorenzGenerator():
     def generate_trajectory(self,
                             x0: np.ndarray,
                             n_steps: int,
-                            h: float = 1/100) -> np.ndarray:
+                            dt: float = 1/100) -> np.ndarray:
         
         '''
         Generates a trajetcory by tiemstepping in rk4.
@@ -150,7 +150,7 @@ class LorenzGenerator():
         Input:
             x0 [np.ndarray]: The starting position vector, np.array([x, y, z])
             n_steps (int): The number of steps to iterate.
-            h (float): The lengfth of timesteps.
+            dt (float): The lengfth of timesteps.
         
         Returns:
             np.ndarray: The trajectory, shape [n_steps + 1, 3]
@@ -160,7 +160,7 @@ class LorenzGenerator():
         x_out[0] = x0
 
         for step_idx in range(1,n_steps+1):
-            x_out[step_idx] = self.rk4(self.calc_derivatives, x = x_out[step_idx - 1], h = h)
+            x_out[step_idx] = self.rk4(self.calc_derivatives, x = x_out[step_idx - 1], dt = dt)
         
         return x_out
     
@@ -206,13 +206,13 @@ class LorenzGenerator():
                                n_steps: int = 10000,
                                d0: np.ndarray = None, 
                                re_norm_steps: int = 10, 
-                               h: float = 0.01) -> float:
+                               dt: float = 0.01) -> float:
         '''
         Estimates the Dominant Lyapunov Exponent of the system:
         1. Integrate over transient period and throw away.
         2. Pertubate x0 by a small margin, d0.
         3. Integrate over  small number of steps, t.
-        4. Find an estaimet of lambda1, lambda = ln(delta/d0) [/ (t*h), bu we do this at the end for compute].
+        4. Find an estaimet of lambda1, lambda = ln(delta/d0) [/ (t*dt), bu we do this at the end for compute].
         5. Normalise the delta to |d0|, but in the same direction as delta. We do this as we need a small enough pertuabtion to assume linearity, and too many timesteps and it's no lomnger close enough.
         6. Repeat
 
@@ -222,7 +222,7 @@ class LorenzGenerator():
             n_steps (int): Number of timesteps total to intergrate over.
             d0 (float): Starting pertubation length.
             re_norm_steps: (int): Number of timesteps of each renormalisation cycle.
-            h (float): Timestep length.
+            dt (float): Timestep length.
 
         Returns:
             float: Estimate of dominant Lyapunov Exponent.
@@ -232,7 +232,7 @@ class LorenzGenerator():
             d0 = np.array([1e-8, 0.0, 0.0])
         #Let settle
         for _ in range(n_transient):
-            x = self.rk4(f = self.calc_derivatives, x = x, h = h)
+            x = self.rk4(f = self.calc_derivatives, x = x, dt = dt)
 
         lambda_cum = 0
         count = 0
@@ -242,8 +242,8 @@ class LorenzGenerator():
         d0_abs = np.linalg.norm(d0)
 
         for i in range(n_steps):
-            x = self.rk4(f=self.calc_derivatives, x = x, h = h)
-            x_pertubated = self.rk4(f = self.calc_derivatives, x = x_pertubated, h = h)
+            x = self.rk4(f=self.calc_derivatives, x = x, dt = dt)
+            x_pertubated = self.rk4(f = self.calc_derivatives, x = x_pertubated, dt = dt)
 
             if (i+1) % re_norm_steps == 0:
             
@@ -259,7 +259,7 @@ class LorenzGenerator():
                 x_pertubated = x + delta_vec
                 count += 1
 
-        return lambda_cum/(count*h*re_norm_steps)
+        return lambda_cum/(count*dt*re_norm_steps)
     
 
     def find_lyapunov_spectrum(self,
@@ -300,14 +300,14 @@ class LorenzGenerator():
         x_ = []
 
         for i in range(transient_steps):
-            x, Q = self.rk4_matrix_and_x(f = self.calc_derivatives, J = self.J, x = x, U = Q,  h=dt)
+            x, Q = self.rk4_matrix_and_x(f = self.calc_derivatives, J = self.J, x = x, U = Q,  dt=dt)
 
             if (i+1) % QR_steps == 0:
                 Q, R = np.linalg.qr(Q)
                 
 
         for i in range(trajectory_steps):
-            x, Q = self.rk4_matrix_and_x(f = self.calc_derivatives, J = self.J, x = x, U = Q,  h=dt)
+            x, Q = self.rk4_matrix_and_x(f = self.calc_derivatives, J = self.J, x = x, U = Q,  dt=dt)
             x_.append(x)
             
             J = self.J(x)

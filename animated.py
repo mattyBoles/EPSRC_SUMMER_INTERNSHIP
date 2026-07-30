@@ -5,7 +5,6 @@ from collections import deque
 from pathlib import Path
 
 from models import tanh_model
-from neuron_contraction_contribution import neuron_contraction_contribution
 from lorenz import LorenzGenerator
 
 np.set_printoptions(suppress=True)

@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from copy import deepcopy
+from tqdm import tqdm
 
 def train_epoch(model,
                 dataloader,
@@ -115,8 +116,9 @@ def train(model,
         'val_acc': [],
         'model_statedict': []
     }
-
-    for epoch in range(1, NUM_EPOCHS+1):
+    pbar = tqdm(range(1, NUM_EPOCHS+1), desc="Training", colour="green")
+    for epoch in pbar:
+        pbar.set_description(f"Training Epoch: {epoch}/{NUM_EPOCHS}")
         train_loss, train_acc = train_epoch(model = model,
                                             dataloader = train_loader,
                                             loss_fn = loss_fn,
@@ -124,7 +126,7 @@ def train(model,
                                             acc_fn = acc_fn,
                                             std = std,
                                             device = device)
-        
+        pbar.set_description(f"Validating Epoch: {epoch}/{NUM_EPOCHS}")
         val_loss, val_acc = val_epoch(model = model,
                                       dataloader = val_loader,
                                       loss_fn = loss_fn,
