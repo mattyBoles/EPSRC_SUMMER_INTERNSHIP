@@ -14,6 +14,9 @@ import json
 def exp_model(z, a, b, c):
     return a * np.exp(b * z) + c
 
+def softplus(x, b):
+      return 1/b * (np.log(1 + np.exp(b*x)))
+
 def plot_model_retrun_map(MODEL_NAME: str,
                           x0: np.ndarray,
                           n_transient: int = 5000,
@@ -90,7 +93,7 @@ def plot_model_retrun_map(MODEL_NAME: str,
 
     for _ in range(n_transient + n_steps):
         x_model = W1 @ x_model.reshape(-1,1) + b1.reshape(-1,1).detach().numpy()
-        x_model = np.tanh(x_model)
+        x_model = softplus(x_model, 1)
         
         x_model =W2@(x_model)+ b2.reshape(-1,1).detach().numpy()
         
@@ -105,6 +108,9 @@ def plot_model_retrun_map(MODEL_NAME: str,
 
     fig, ax = plt.subplots()
 
+    x_model_traj = np.asarray(x_model_traj)
+    #ax.plot(x_model_traj[:,0],x_model_traj[:,1], x_model_traj[:,2])
+
     ax.scatter(z_maxima[:-1], z_maxima[1:])
 
     ax.plot(z_range_low,  y_left,  color='red',   linewidth=2)
@@ -112,5 +118,16 @@ def plot_model_retrun_map(MODEL_NAME: str,
     ax.set_xlabel('Z_n')
     ax.set_ylabel('Z_n+1')
     ax.set_title('Return Map of Model, Compared with the True System')
+
     plt.show()
     plt.close('all')
+
+    # plt.figure()
+    # plt.plot(z_model)
+    # plt.title("Model z trajectory")
+    # plt.show()
+
+
+
+if __name__ == '__main__':
+      plot_model_retrun_map(MODEL_NAME = 'hmmmm_1', x0 = np.array([1,1,0]), n_steps=10000)

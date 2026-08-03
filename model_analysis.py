@@ -66,7 +66,7 @@ def analysis(MODEL_NAME: str,
     Q = np.eye(3)
     lambda_ = np.empty((3,0))
     x = torch.tensor([[np.random.uniform(-20, 20), np.random.uniform(-20, 20), np.random.uniform(0,50)]])
-    #x = torch.tensor([[2,4,9]])
+    x = torch.tensor([[2,4,9]])
     x = (x - mean)/std
     for i in range(transient_steps):
         x = x.float()
@@ -104,9 +104,9 @@ def analysis(MODEL_NAME: str,
     return Lyapunov_spectrum[0], Lyapunov_spectrum[1],Lyapunov_spectrum[2], singular_values
 
 if __name__ == '__main__':
-    l1, l2, l3 = [],[],[]
+    # l1, l2, l3 = [],[],[]
     # for _ in range(20):
-    lyapunov_11, lyapunov_21, lyapunov_31, sv1 = analysis(MODEL_NAME="ralph_loop_precise")
+    lyapunov_11, lyapunov_21, lyapunov_31, sv1 = analysis(MODEL_NAME="hmmmm_2")
     #     l1.append(lyapunov_11)
     #     l2.append(lyapunov_21)
     #     l3.append(lyapunov_31)
@@ -122,17 +122,17 @@ if __name__ == '__main__':
 
     fig, axes = plt.subplots(3,1)
 
-    axes[0].plot(sv1[:1000,0], label = 'SV1 - model')
-    axes[1].plot(sv1[:1000,1], label = 'SV2 - model')
-    axes[2].plot(sv1[:1000,2], label = 'SV3 - model')
+    axes[0].plot(sv1[1400:2400,0], label = 'SV1 - model')
+    axes[1].plot(sv1[1400:2400,1], label = 'SV2 - model')
+    axes[2].plot(sv1[1400:2400,2], label = 'SV3 - model')
     axes[0].set_title('Singular Value Decomposition- Model')
     axes[0].set_xlabel('Timestep, dt = 0.01')
     axes[0].set_ylabel('SV')
     axes[0].legend()
 
-    axes[0].plot(sv_real[:1000,0], label = 'SV1 - true')
-    axes[1].plot(sv_real[:1000,1], label = 'SV2 -  true')
-    axes[2].plot(sv_real[:1000,2], label = 'SV3 - true')
+    axes[0].plot(sv_real[1400:2400,0], label = 'SV1 - true')
+    axes[1].plot(sv_real[1400:2400,1], label = 'SV2 -  true')
+    axes[2].plot(sv_real[1400:2400,2], label = 'SV3 - true')
 
     axes[1].legend()
     axes[0].legend()
@@ -141,7 +141,7 @@ if __name__ == '__main__':
     plt.show()
 
 
-    print(f"REal: {sv_real[:,2].min()}")
-    print(f"Model: {sv1[:,2].min()}")    
+    print(f"REal: {np.min(sv_real[:,2])}")
+    print(f"Model: {np.min(sv1[:,2])}")    
 
-    print(f"Lyapunov1: {l1}\nLyapunov2: {l2}\nLyapunov3: {l3}\n")
+    print(f"Lyapunov1: {lyapunov_11}\nLyapunov2: {lyapunov_21}\nLyapunov3: {lyapunov_31}\n")

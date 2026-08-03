@@ -92,9 +92,8 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
                             RANDOM_SEED=RANDOM_SEED*100)
 
 
-    BATCH_SIZE = 64
-    lr = 1e-3
-    lr = 1e-3
+    #BATCH_SIZE = 64 for lbfgs, use full set
+    lr = 1.0
     NUM_EPOCHS = config['NUM_EPOCHS']
 
 
@@ -107,7 +106,7 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
     loss_fn = torch.nn.MSELoss()
     optimiser = torch.optim.LBFGS(
         model.parameters(),
-        lr=1.0,
+        lr=lr,
         max_iter=10000,
         history_size=100,
         tolerance_grad=1e-12,
@@ -160,7 +159,7 @@ def train_model(config:dict) -> tuple[str, float, float, float]:
     print('\n\n')
     print('-----RESULTS-----')
     print(f'| Train MSE : {trn_loss:.5f} | Train Average Euclidean Distance: {trn_acc:.5f} |\n')
-    print(f'| Val MSE : {trn_loss:.5f} | Val Average Euclidean Distance: {val_acc:.5f} |\n')
+    print(f'| Val MSE : {val_loss:.5f} | Val Average Euclidean Distance: {val_acc:.5f} |\n')
     print(f'| Test MSE : {test_loss:.5f} | Test Average Euclidean Distance: {test_acc:.5f} |\n')
 
 

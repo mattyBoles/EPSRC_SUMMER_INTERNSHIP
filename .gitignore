@@ -28,3 +28,6 @@ plots.py
 read_log.py
 animated*
 dataset/
+*.pt
+experiment.py
+lbfgs_vs_adam.py

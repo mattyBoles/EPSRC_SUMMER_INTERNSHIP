@@ -38,9 +38,9 @@ def train_epoch(model,
             loss.backward()
             return loss
 
+
         loss = optimiser.step(closure)
 
-    
         epoch_loss += loss.item() 
         epoch_preds.append(model(inputs))
 
@@ -115,7 +115,7 @@ def train(model,
         'train_acc': [],
         'val_loss': [],
         'val_acc': [],
-        'model_statedict': []
+        'model_statedict': [],
     }
     pbar = tqdm(range(1, NUM_EPOCHS+1), desc="Training", colour="green")
     for epoch in pbar:
